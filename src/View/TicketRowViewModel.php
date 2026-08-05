@@ -15,5 +15,6 @@ final readonly class TicketRowViewModel
         public string $createdAt,
         public string $href,
         public ?int $priority = null,
+        public string $statusComment = '',
     ) {}
 }

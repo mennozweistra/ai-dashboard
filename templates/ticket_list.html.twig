@@ -42,6 +42,7 @@
                         {% else %}
                             <span class="ticket-priority priority-chip is-empty"></span>
                         {% endif %}
+                        <span class="ticket-status-comment">{{ ticket.statusComment }}</span>
                         <span class="status-word">{{ ticket.status }}</span>
                     </a>
                 </li>

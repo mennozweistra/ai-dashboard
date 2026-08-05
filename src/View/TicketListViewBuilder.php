@@ -57,6 +57,7 @@ final readonly class TicketListViewBuilder
                 createdAt: $t->createdAt->format('Y-m-d'),
                 href: '/?project=' . $t->projectId . '&ticket=' . $t->id,
                 priority: $t->priority,
+                statusComment: $t->statusComment,
             ), $tickets),
             showDone: $showDone,
             templates: $templates,

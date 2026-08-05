@@ -135,6 +135,31 @@ final class TicketListViewBuilderTest extends BaseViewTest
     }
 
     #[Test]
+    public function it_propagates_status_comment_to_ticket_row_view_model(): void
+    {
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'commented-ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $project = $this->projectService->show($this->projectId);
+        $refs = $this->ticketService->list($this->projectId);
+        $model = $this->builder->build($project, $refs, showDone: false);
+
+        self::assertSame('waiting on the migration review', $model->tickets[0]->statusComment);
+    }
+
+    #[Test]
+    public function it_carries_an_empty_status_comment_when_none_was_set(): void
+    {
+        $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'uncommented-ticket'));
+
+        $project = $this->projectService->show($this->projectId);
+        $refs = $this->ticketService->list($this->projectId);
+        $model = $this->builder->build($project, $refs, showDone: false);
+
+        self::assertSame('', $model->tickets[0]->statusComment);
+    }
+
+    #[Test]
     public function it_propagates_available_template_names_to_the_view_model(): void
     {
         // Ticket 160 task 1431: the create-ticket popup's template dropdown

@@ -132,6 +132,23 @@ final class TicketListTest extends BaseHttpTest
     }
 
     #[Test]
+    public function it_renders_status_comment_in_list_row(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'proj', path: '/proj'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'commented-ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $request = Request::create('/?project=' . $project->id);
+        $response = $this->app->handle($request, catch: false);
+        $content = (string) $response->getContent();
+
+        self::assertMatchesRegularExpression(
+            '/<span class="ticket-status-comment"[^>]*>waiting on the migration review<\/span>/',
+            $content,
+        );
+    }
+
+    #[Test]
     public function it_renders_the_ticket_list_when_bin_tm_is_unreachable(): void
     {
         // Ticket 160 task 1431: TicketListController now reads the template

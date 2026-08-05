@@ -369,24 +369,48 @@ main {
 .ticket-row a {
   display: grid;
   width: 100%;
-  /* name+id is the only flexible column, so it claims all the spare
-     width and the title truncates as late as possible. Each right-aligned
-     cell is pinned to its own column below (date=3, type=4, priority=5,
-     status=last via -2/-1) so every row's columns align across the list. */
-  grid-template-columns: 16px minmax(0, 1fr) auto auto auto auto;
+  /* name+id and the status comment are the two flexible columns, sized
+     proportionally (2fr / 1fr) so they share the row's spare width and
+     both truncate rather than wrap. A proportional track resolves to the
+     same pixel width in every row because every row's grid container is
+     the same width, which is what keeps the comment column aligned down
+     the list — an `auto` track would size to that one row's own content
+     instead. Each remaining cell is pinned to its own fixed-width column
+     below (comment=3, date=4, type=5, priority=6, status=last via -2/-1)
+     so every row's columns align across the list. */
+  grid-template-columns: 16px minmax(0, 2fr) minmax(0, 1fr) auto auto auto auto;
   align-items: center;
   gap: 16px;
   padding: 12px 4px;
   color: var(--text);
   transition: background 100ms ease-out;
 }
+/* The comment column (track 3) sits in the markup after the priority chip
+   (track 6), so its column number is lower than several cells that precede
+   it in source order. Grid auto-placement's cursor only advances forward,
+   never back, so without a fixed row every cell from the comment onward
+   would be pushed into an implicit second row the first time a row's
+   source order and column order disagree. Pinning every cell to row 1
+   keeps the whole row on one line regardless of source order. */
+.ticket-row a > * {
+  grid-row: 1;
+}
 .ticket-row a:hover { background: var(--surface); }
 .ticket-row a:hover .ticket-id { color: var(--accent); }
+.ticket-row .ticket-status-comment {
+  font-size: 14px;
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  grid-column: 3;
+}
 .ticket-row .ticket-date {
   font-family: var(--mono);
   font-size: 14px;
   color: var(--text-faint);
-  grid-column: 3;
+  grid-column: 4;
   justify-self: center;
 }
 .ticket-name-wrap {
@@ -502,11 +526,11 @@ main {
 }
 .ticket-row .ticket-type {
   align-self: center;
-  grid-column: 4;
+  grid-column: 5;
   justify-self: center;
 }
 .ticket-row .ticket-priority {
-  grid-column: 5;
+  grid-column: 6;
   justify-self: center;
 }
 .ticket-head .objective {
@@ -1676,7 +1700,8 @@ dialog#terminal-error::backdrop {
   .ticket-row .ticket-id,
   .ticket-row .ticket-date,
   .ticket-row .ticket-type,
-  .ticket-row .ticket-priority { display: none; }
+  .ticket-row .ticket-priority,
+  .ticket-row .ticket-status-comment { display: none; }
 
   /* On narrow viewports the centered modal expands to full-screen —
    * borders, radius, and the outer drop shadow are dropped since the
