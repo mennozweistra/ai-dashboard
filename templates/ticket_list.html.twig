@@ -17,10 +17,17 @@
             <input type="checkbox" id="show-done-toggle" name="show_done" value="1"
                    {% if model.showDone %}checked{% endif %} onchange="this.form.submit()">
             <label for="show-done-toggle">show done</label>
+            <input type="checkbox" id="in-flight-toggle" name="in_flight" value="1"
+                   {% if model.inFlight %}checked{% endif %} onchange="this.form.submit()">
+            <label for="in-flight-toggle">in flight</label>
         </form>
     </div>
     {% if model.tickets is empty %}
-        <p class="empty">No tickets{% if not model.showDone %} (excluding done){% endif %} in this project.</p>
+        {% if model.inFlight %}
+            <p class="empty">No tickets being worked on in this project.</p>
+        {% else %}
+            <p class="empty">No tickets{% if not model.showDone %} (excluding done){% endif %} in this project.</p>
+        {% endif %}
     {% else %}
         <ul class="ticket-list">
             {% for ticket in model.tickets %}

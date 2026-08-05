@@ -22,6 +22,8 @@ final readonly class TicketListViewBuilder
      *     value; same fallback rule as `$createTicketTitle`.
      * @param string|null $createTicketTemplate Just-submitted selected
      *     template name; same fallback rule as `$createTicketTitle`.
+     * @param bool $inFlight Requirement 74: when true, narrows the list to
+     *     tickets actually being worked on, independently of `$showDone`.
      */
     public function build(
         ProjectOut $project,
@@ -33,9 +35,23 @@ final readonly class TicketListViewBuilder
         ?string $createTicketTitle = null,
         ?string $createTicketDescription = null,
         ?string $createTicketTemplate = null,
+        bool $inFlight = false,
     ): TicketListViewModel {
         if (!$showDone) {
             $tickets = array_values(array_filter($tickets, fn(TicketRef $t) => $t->status !== 'done'));
+        }
+
+        if ($inFlight) {
+            // Pending is dropped: it has not been started. Skipped is kept:
+            // a ticket being worked on can end up skipped through its last
+            // task, so dropping it would take live work off the page. Done
+            // is dropped by this rule too, on its own, regardless of
+            // $showDone above.
+            $inFlightStatuses = ['active', 'blocked', 'failed', 'review', 'skipped'];
+            $tickets = array_values(array_filter(
+                $tickets,
+                fn(TicketRef $t) => in_array($t->status, $inFlightStatuses, true),
+            ));
         }
 
         usort(
@@ -66,6 +82,7 @@ final readonly class TicketListViewBuilder
             createTicketTitle: $createTicketTitle ?? '',
             createTicketDescription: $createTicketDescription ?? '',
             createTicketTemplate: $createTicketTemplate ?? '',
+            inFlight: $inFlight,
         );
     }
 }

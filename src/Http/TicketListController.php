@@ -21,9 +21,9 @@ final readonly class TicketListController
         private TmCliRunner $tmCliRunner,
     ) {}
 
-    public function __invoke(int $projectId, bool $showDone): ?Response
+    public function __invoke(int $projectId, bool $showDone, bool $inFlight = false): ?Response
     {
-        return $this->render($projectId, $showDone);
+        return $this->render($projectId, $showDone, $inFlight);
     }
 
     /**
@@ -39,6 +39,7 @@ final readonly class TicketListController
     public function render(
         int $projectId,
         bool $showDone,
+        bool $inFlight = false,
         bool $createTicketOpen = false,
         ?string $createTicketError = null,
         ?string $createTicketTitle = null,
@@ -63,6 +64,7 @@ final readonly class TicketListController
             $createTicketTitle,
             $createTicketDescription,
             $createTicketTemplate,
+            $inFlight,
         );
         $html = $this->twig->render('ticket_list.html.twig', ['model' => $model]);
         $response = new Response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);

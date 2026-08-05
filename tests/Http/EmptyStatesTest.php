@@ -108,6 +108,43 @@ final class EmptyStatesTest extends BaseHttpTest
     }
 
     #[Test]
+    public function it_shows_no_tickets_being_worked_on_message_when_nothing_is_in_flight(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'p', path: '/p'));
+        $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'pending-ticket'));
+        $done = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'done-ticket'));
+        $this->ticketService->set(id: $done->id, status: 'done');
+
+        $response = $this->app->handle(Request::create('/?project=' . $project->id . '&in_flight=1'));
+
+        self::assertStringContainsString(
+            'No tickets being worked on in this project.',
+            (string) $response->getContent(),
+        );
+    }
+
+    #[Test]
+    public function it_ignores_show_done_when_in_flight_filter_is_on(): void
+    {
+        // Requirement 74: the two controls stay independent. With in_flight
+        // on, show_done has no effect — the filter simply wins, no
+        // disabling logic.
+        $project = $this->projectService->add(new ProjectIn(name: 'p', path: '/p'));
+        $active = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'active-ticket'));
+        $done = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'done-ticket'));
+        $this->ticketService->set(id: $active->id, status: 'active');
+        $this->ticketService->set(id: $done->id, status: 'done');
+
+        $response = $this->app->handle(
+            Request::create('/?project=' . $project->id . '&in_flight=1&show_done=1'),
+        );
+        $content = (string) $response->getContent();
+
+        self::assertStringContainsString('active-ticket', $content);
+        self::assertStringNotContainsString('done-ticket', $content);
+    }
+
+    #[Test]
     public function it_shows_no_plan_yet_for_ticket_with_no_phases(): void
     {
         $project = $this->projectService->add(new ProjectIn(name: 'p', path: '/p'));

@@ -356,6 +356,11 @@ main {
   transition: color 120ms ease-out;
 }
 .toggle-form.is-on label { color: var(--text); }
+/* Higher specificity than the rule above (two elements vs one), so each
+   checkbox's own label reflects its own state — needed since ticket 56 put
+   two independent checkboxes (show_done, in_flight) in one form and is-on
+   only tracks show_done. */
+.toggle-form input:checked + label { color: var(--text); }
 .toggle-form label:hover,
 .toggle-form.is-on label:hover { color: var(--accent); }
 
