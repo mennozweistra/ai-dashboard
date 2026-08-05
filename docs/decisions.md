@@ -192,7 +192,9 @@ As of ticket 161, the same `TM_DB` variable is honored by `bin/tm` and `bin/tm-m
 
 ## 2026-07-03 — Task 1268 (ticket 153) — Read-only ticket-panel columns render outside `.panel-view`/`.panel-edit`, not duplicated inside both
 
-**Decision:** The `.task-panel-meta` section listing `id`/`project`/`status`/`type`/`created`/`updated`/`archived`/`session`/`priority` is a direct child of `.task-panel-body` in `#ticket-panel`, a sibling of `.panel-view` and `.panel-edit`, not duplicated inside each. Only `name`/`description`/`ai_description` — the three editable fields — are rendered twice (once read-only in `.panel-view`, once as form controls in `.panel-edit`).
+**Decision:** The `.task-panel-meta` section listing `id`/`project`/`status`/`type`/`created`/`updated`/`archived`/`session`/`priority`/`status comment` is a direct child of `.task-panel-body` in `#ticket-panel`, a sibling of `.panel-view` and `.panel-edit`, not duplicated inside each. The editable fields — `name`/`description`/`ai_description`/`status_comment` — are rendered twice (once in `.panel-view` or, for `status_comment`, in the always-visible meta section, and once as form controls in `.panel-edit`).
+
+**Amended 2026-08-05 (ticket 56, requirement 75):** `status_comment` joined both lists. It is the one field that is both editable and part of the always-visible meta section, so it sits in `.task-panel-meta` rather than in `.panel-view`, and its meta row reads the same edit-preserving value the form input does — otherwise a failed save would show the stored comment beside the typed one.
 
 **Reason:** Requirement 137 asks that the panel show every column, and the task's ai_description says the non-editable columns "render read-only in both modes". Placing them outside the `data-mode`-gated wrapper satisfies "both modes" for free — they are simply always in the DOM and always visible, since nothing about them changes between view and edit. Duplicating nine unchanging fields into both `.panel-view` and `.panel-edit` would be pure markup duplication with no behavioural difference.
 
