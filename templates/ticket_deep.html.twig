@@ -47,6 +47,10 @@
                 <dt>Archived</dt><dd>{{ model.header.archivedAt }}</dd>
                 <dt>Session</dt><dd>{{ model.header.sessionId }}</dd>
                 <dt>Priority</dt><dd>{{ model.header.priority }}</dd>
+                {# editStatusComment falls back to the stored value on a normal render (TicketDeepViewBuilder::build()),
+                   so this stays in sync with the edit form below instead of showing the stale stored comment
+                   underneath a just-typed one after a failed save. #}
+                <dt>Status comment</dt><dd>{{ model.editStatusComment }}</dd>
             </dl>
         </section>
         <div class="panel-view">
@@ -70,6 +74,10 @@
                 <div class="ticket-edit-field">
                     <label for="ticket-edit-ai-description">AI description</label>
                     <textarea id="ticket-edit-ai-description" name="ai_description">{{ model.editAiDescription }}</textarea>
+                </div>
+                <div class="ticket-edit-field">
+                    <label for="ticket-edit-status-comment">Status comment</label>
+                    <input type="text" id="ticket-edit-status-comment" name="status_comment" value="{{ model.editStatusComment }}">
                 </div>
                 <div class="ticket-edit-actions">
                     <button type="submit" class="ticket-edit-save">Save</button>

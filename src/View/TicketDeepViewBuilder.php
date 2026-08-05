@@ -21,6 +21,7 @@ final readonly class TicketDeepViewBuilder
      *     after a failed save; falls back to the stored value when null.
      * @param string|null $editDescription Just-submitted `description` value; same fallback rule.
      * @param string|null $editAiDescription Just-submitted `ai_description` value; same fallback rule.
+     * @param string|null $editStatusComment Just-submitted `status_comment` value; same fallback rule.
      * @param int|null $phaseEditId Id of the single phase whose panel must re-open in edit mode
      *     after a failed `POST /phase/{id}/edit` (ticket 153 task 1269); null on a normal render.
      * @param string|null $phaseEditError Parsed `bin/tm` error message for that phase's save failure.
@@ -49,6 +50,7 @@ final readonly class TicketDeepViewBuilder
         ?string $editName = null,
         ?string $editDescription = null,
         ?string $editAiDescription = null,
+        ?string $editStatusComment = null,
         ?int $phaseEditId = null,
         ?string $phaseEditError = null,
         ?string $phaseEditName = null,
@@ -78,6 +80,7 @@ final readonly class TicketDeepViewBuilder
             archivedAt: $deep->archivedAt?->format('Y-m-d H:i') ?? '',
             sessionId: $deep->sessionId,
             priority: $deep->priority,
+            statusComment: $deep->statusComment,
         );
 
         $requirements = $this->buildRequirements($deep->requirements);
@@ -114,6 +117,7 @@ final readonly class TicketDeepViewBuilder
             editName: $editName ?? $deep->name,
             editDescription: $editDescription ?? $deep->description,
             editAiDescription: $editAiDescription ?? $deep->aiDescription,
+            editStatusComment: $editStatusComment ?? $deep->statusComment,
             phaseEditId: $phaseEditId,
             taskEditId: $taskEditId,
             ideConfigured: $ideConfigured,

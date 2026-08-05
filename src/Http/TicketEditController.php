@@ -41,9 +41,11 @@ final readonly class TicketEditController
         $name = $request->request->get('name');
         $description = $request->request->get('description');
         $aiDescription = $request->request->get('ai_description');
+        $statusComment = $request->request->get('status_comment');
         $name = is_string($name) ? $name : null;
         $description = is_string($description) ? $description : null;
         $aiDescription = is_string($aiDescription) ? $aiDescription : null;
+        $statusComment = is_string($statusComment) ? $statusComment : null;
 
         $options = ['ticket' => (string) $ticketId];
         if ($name !== null) {
@@ -54,6 +56,9 @@ final readonly class TicketEditController
         }
         if ($aiDescription !== null) {
             $options['ai-description'] = $aiDescription;
+        }
+        if ($statusComment !== null) {
+            $options['status-comment'] = $statusComment;
         }
 
         $result = $this->tmCliRunner->run('ticket:set', $options);
@@ -70,6 +75,7 @@ final readonly class TicketEditController
             editName: $name,
             editDescription: $description,
             editAiDescription: $aiDescription,
+            editStatusComment: $statusComment,
         );
     }
 }
