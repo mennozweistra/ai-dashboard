@@ -50,6 +50,7 @@ The single page. Renders one of three states based on query parameters.
 | `project` | integer | No | Id of the project to display. If absent, the response is the project-list state. |
 | `ticket` | integer | No | Id of the ticket to display in the deep view. Requires `project` to also be present and to match the ticket's project. |
 | `show_done` | any value | No | If present (any value, including empty string), the ticket list includes tickets whose status is `done`. The form submission renders this as `show_done=1`. If absent, done tickets are hidden. |
+| `in_flight` | any value | No | If present (any value, including empty string), the ticket list keeps only tickets whose status is `active`, `blocked`, `failed`, `review`, or `skipped` — the tickets actually being worked on. The form submission renders this as `in_flight=1`. Independent of `show_done`: when both are present, `in_flight` already excludes `done`, so `show_done` has no visible effect. |
 
 #### State resolution
 
@@ -98,6 +99,7 @@ Standard HTML form POST (`application/x-www-form-urlencoded`), no JSON. Accepted
 | `name` | `--name` | New ticket name |
 | `description` | `--description` | New ticket description |
 | `ai_description` | `--ai-description` | New ticket AI description |
+| `status_comment` | `--status-comment` | New status comment |
 
 A field absent from the POST body is not forwarded to `ticket:set` at all, so `bin/tm` leaves that column unchanged — the same "missing option means leave unchanged" rule `TicketSetCommand` already applies to its own callers.
 
@@ -105,7 +107,7 @@ A field absent from the POST body is not forwarded to `ticket:set` at all, so `b
 
 - **Success**: `302 Found`, `Location: /?project={projectId}&ticket={id}`. No body. The browser performs a plain full-page reload of the ticket deep view — no JSON, no partial response (requirement 132).
 - **Ticket not found** (`{id}` does not resolve to a ticket): `404 Not Found`, `text/plain; charset=utf-8` body.
-- **`bin/tm` failure** (non-zero exit, `ticket:set` rejects the change): `200 OK`, `text/html; charset=utf-8`. The full `ticket_deep.html.twig` page re-renders (the same rendering path `GET /` uses for the deep view), with the ticket panel opened already in edit mode, the parsed `error.message` from `bin/tm`'s JSON envelope displayed inside the panel (never the raw JSON — requirement 131), and the just-submitted `name`/`description`/`ai_description` values preserved in the form inputs instead of the stored values, so the user does not lose typed text.
+- **`bin/tm` failure** (non-zero exit, `ticket:set` rejects the change): `200 OK`, `text/html; charset=utf-8`. The full `ticket_deep.html.twig` page re-renders (the same rendering path `GET /` uses for the deep view), with the ticket panel opened already in edit mode, the parsed `error.message` from `bin/tm`'s JSON envelope displayed inside the panel (never the raw JSON — requirement 131), and the just-submitted `name`/`description`/`ai_description`/`status_comment` values preserved in the form inputs instead of the stored values, so the user does not lose typed text.
 
 ### 2.5 `POST /phase/{id}/edit`
 
