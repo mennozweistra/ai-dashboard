@@ -189,15 +189,21 @@ final class TicketEditControllerTest extends BaseHttpTest
     #[Test]
     public function it_keeps_the_typed_status_comment_in_the_reopened_form_on_a_failed_save(): void
     {
-        // Requirement 75: on a failed save the reopened panel keeps the
+        // Requirement 75: on a failed save the reopened form keeps the
         // submitted comment, not the stored one, mirroring the existing
         // preserve-on-error behaviour for name/description/ai_description
         // (it_rerenders_the_ticket_deep_page_with_the_parsed_error_message_on_failure
         // above). The regular fake-tm stub reports failure exactly when
         // --name is "fail-me".
+        //
+        // The claim is about the form input only, not the whole page. The
+        // always-visible meta block above the form keeps showing the stored
+        // value, the same as every other field it lists — a rejected save
+        // changes nothing that is stored, so the meta block must not report
+        // as if it had.
         $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
         $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
-        $this->ticketService->set(id: $ticket->id, statusComment: 'stored comment, must not reappear');
+        $this->ticketService->set(id: $ticket->id, statusComment: 'stored comment');
 
         $response = $this->app->handle(Request::create(
             "/ticket/{$ticket->id}/edit",
@@ -211,7 +217,11 @@ final class TicketEditControllerTest extends BaseHttpTest
             '<input type="text" id="ticket-edit-status-comment" name="status_comment" value="typed but not saved">',
             $body,
         );
-        self::assertStringNotContainsString('stored comment, must not reappear', $body);
+        self::assertStringNotContainsString(
+            '<input type="text" id="ticket-edit-status-comment" name="status_comment" value="stored comment">',
+            $body,
+        );
+        self::assertStringContainsString('<dt>Status comment</dt><dd>stored comment</dd>', $body);
     }
 
     #[Test]
