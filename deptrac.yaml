@@ -1,0 +1,53 @@
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: Kernel
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiDashboard\\Kernel\\.*
+    - name: Http
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiDashboard\\Http\\.*
+    - name: View
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiDashboard\\View\\.*
+    - name: AiLibSchemas
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiLib\\Schemas\\.*
+    - name: AiLibServices
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiLib\\Services\\.*
+    - name: AiLibDomain
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiLib\\Domain\\.*
+    - name: AiLibRepositories
+      collectors:
+        - type: classLike
+          value: AiToolset\\AiLib\\Repositories\\.*
+  ruleset:
+    Kernel:
+      - Http
+      - View
+      - AiLibServices
+      - AiLibSchemas
+      - AiLibDomain
+      - AiLibRepositories
+    Http:
+      - View
+      - AiLibServices
+      - AiLibSchemas
+      - AiLibDomain
+      - AiLibRepositories
+    View:
+      - AiLibSchemas
+      - AiLibDomain
+    AiLibSchemas: ~
+    AiLibServices: ~
+    AiLibDomain: ~
+    AiLibRepositories: ~

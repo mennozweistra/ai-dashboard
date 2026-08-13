@@ -1,0 +1,13 @@
+<div class="task" data-task-id="{{ task.id }}" data-status="{{ task.status }}" role="button" tabindex="0">
+    <span class="marker marker-{{ task.status }}" aria-hidden="true"></span>
+    {% set human_icons = ['🧑‍💻','🧑‍⚖️','🕵️'] %}
+    <span class="task-title-wrap">
+        <span class="task-title">{{ task.title }}</span>
+        {% if task.maxAttempts > 0 %}<span class="task-attempts">({{ task.attempts }}/{{ task.maxAttempts }} runs)</span>{% endif %}
+        {% if task.actor == 'human' %}<span class="task-actor">{{ human_icons[task.id % 3] }}</span>{% endif %}
+        {% if task.model %}<span class="task-model">{{ task.model }}</span>{% endif %}
+        <span class="task-id">[{{ task.id }}]</span>
+        <button type="button" class="row-view-link" data-task-id="{{ task.id }}">view</button>
+    </span>
+    <span class="task-status status-cycle">{{ task.status }}</span>
+</div>

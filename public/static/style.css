@@ -1,0 +1,1689 @@
+/* tm dashboard — calm status board
+ *
+ * One earned accent (warm amber) reserved for the active state. Status
+ * lives in a left gutter as small shapes, not pill chips. Single
+ * content column sized for a half-monitor window beside a terminal.
+ * Warm-tinted dark neutrals carry the rest.
+ */
+
+:root {
+  --bg:           oklch(0.16 0.005 65);
+  --surface:      oklch(0.20 0.006 65);
+  --surface-2:    oklch(0.23 0.007 65);
+  --text:         oklch(0.92 0.008 70);
+  --text-muted:   oklch(0.66 0.008 70);
+  --text-faint:   oklch(0.50 0.008 70);
+  --rule:         oklch(0.27 0.006 65);
+  --rule-strong:  oklch(0.34 0.008 65);
+
+  --accent:       oklch(0.80 0.13 78);
+  --accent-soft:  oklch(0.55 0.10 78);
+
+  --ok:           oklch(0.72 0.10 148);
+  --review:       oklch(0.84 0.13 95);
+  --failed:       oklch(0.64 0.15 28);
+
+  --mono: ui-monospace, "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+
+  --col: none;
+  --pad-x: 100px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4 { font-weight: 500; margin: 0; }
+
+/* ---------- Header ---------- */
+
+/* Sticky two-line band (ticket 164): a breadcrumb row (`.site-header-inner`)
+ * over an optional per-page title row (`.site-header-title`, filled by the
+ * `titleline` Twig block; absent on pages that never define that block, so
+ * the band shrinks to the breadcrumb row alone there — the not-found and
+ * ticket-error pages). `position: sticky` pins the whole `<header>` to the
+ * viewport top while the page scrolls under it; the explicit `background`
+ * keeps scrolled content from showing through, since `.site-header` itself
+ * only ever declared a border before this. No `z-index` is needed to stay
+ * above `<main>`: a `position: sticky` element already paints after
+ * non-positioned in-flow siblings in the same stacking context, and every
+ * dialog panel (`#task-panel`, `#ticket-panel`, ...) renders in the
+ * browser's top layer via `showModal()`, above all positioned content
+ * regardless of z-index. */
+.site-header {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+}
+.site-header-inner {
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: 14px var(--pad-x) 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.site-header .home { color: var(--text); }
+.site-header a:hover { color: var(--accent); }
+.site-header .sep { color: var(--text-faint); padding: 0 2px; }
+
+/* Title row: same horizontal rhythm as `.site-header-inner` and `main`
+ * (`--col` max-width, `--pad-x` gutters) so a right-aligned button group (the
+ * ticket page's `.ticket-head-buttons`, via its `margin-left: auto`) lands
+ * on the same vertical line as content below. `> *` stretches whichever
+ * single wrapper each page's `titleline` block renders (a bare `<h2>`, or
+ * `.ticket-list-title`, or `.ticket-head-line`) to the row's full width, so
+ * that trick still reaches the row's true right edge instead of stopping at
+ * the wrapper's own content width. The shared `h1`/`h2` rule below is what
+ * makes the row's height and divider position identical across the three
+ * primary pages: previously `.ticket-list-head h2` and `.ticket-head h1`
+ * each declared their own 24px size; now one rule sets 19px for both, and
+ * only font-family/letter-spacing (mono for the ticket title, sans for
+ * project titles and "Projects") still differ per page. */
+.site-header-title {
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: 2px var(--pad-x) 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.site-header-title > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.site-header-title h1,
+.site-header-title h2 {
+  font-size: 19px;
+  margin: 0;
+  min-width: 0;
+}
+.site-header-title h2 {
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Main column ---------- */
+
+main {
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: 20px var(--pad-x) 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.section-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 8px;
+}
+.section-label > label {
+  cursor: pointer;
+  user-select: none;
+}
+.section-label > label:hover {
+  color: var(--text);
+}
+
+/* Section-level folds: click the .section-label to toggle the content
+ * below. The hidden checkbox sits as the first child of the section,
+ * the h2 acts as its label, and a `~` sibling rule hides children when
+ * the toggle is unchecked. */
+.phases-toggle,
+.logs-toggle,
+.requirements-toggle,
+.questions-toggle,
+.details-toggle {
+  display: none;
+}
+.phases-toggle:not(:checked) ~ .phase,
+.phases-toggle:not(:checked) ~ .empty {
+  display: none;
+}
+.logs-toggle:not(:checked) ~ .log-entries,
+.logs-toggle:not(:checked) ~ .empty {
+  display: none;
+}
+.requirements-toggle:not(:checked) ~ .requirements-list,
+.requirements-toggle:not(:checked) ~ .empty {
+  display: none;
+}
+.questions-toggle:not(:checked) ~ .questions-list,
+.questions-toggle:not(:checked) ~ .empty {
+  display: none;
+}
+.details-toggle:not(:checked) ~ .ai-description,
+.details-toggle:not(:checked) ~ .empty {
+  display: none;
+}
+
+.empty {
+  color: var(--text-faint);
+  font-style: italic;
+  font-size: 16px;
+}
+
+.phase-empty {
+  padding: 4px 0 12px 28px;
+}
+
+.error {
+  font-size: 16px;
+  color: var(--failed);
+  border-top: 1px solid var(--failed);
+  padding-top: 12px;
+}
+
+/* ---------- Status gutter markers ----------
+ *
+ * Every task / phase / ticket row has a 16px gutter cell on the left
+ * carrying one shape. The shape — not color alone — is the primary
+ * status signal. Active is the only marker that wears the accent.
+ */
+
+.marker {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  position: relative;
+  flex: 0 0 16px;
+}
+.marker::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.marker-pending::before { content: '○'; color: var(--text-faint); font-size: 11px; }
+.marker-active::before  { content: '|'; color: var(--accent);     font-size: 14px; font-weight: 300; }
+.marker-done::before    { content: '✓'; color: var(--ok);         font-size: 12px; }
+.marker-review::before  { content: '⚠'; color: var(--review);    font-size: 11px; }
+.marker-failed::before  { content: '✗'; color: var(--failed);    font-size: 11px; }
+.marker-blocked::before { content: '✗'; color: var(--failed);    font-size: 11px; }
+.marker-skipped::before { content: '–'; color: var(--text-faint); font-size: 11px; }
+
+/* ---------- Projects landing ---------- */
+
+.projects-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.project-row { border-top: 1px solid var(--rule); }
+.project-row:last-child { border-bottom: 1px solid var(--rule); }
+.project-row a {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 4px;
+  color: var(--text);
+  transition: background 100ms ease-out;
+}
+.project-row a:hover { background: var(--surface); }
+.project-name-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.project-row .project-name {
+  font-size: 19px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-row .status-word {
+  font-size: 13px;
+  color: var(--text-faint);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+  justify-self: center;
+}
+.project-row[data-status="done"]    .status-word { color: var(--ok); }
+.project-row[data-status="review"]  .status-word { color: var(--review); }
+.project-row[data-status="failed"]  .status-word { color: var(--failed); }
+.project-row[data-status="active"]  .status-word { color: var(--accent); }
+.project-row[data-status="blocked"] .status-word { color: var(--failed); }
+
+/* ---------- Ticket list ---------- */
+
+/* As of ticket 164, `.ticket-list-title` (project page) and the bare
+ * "Projects" `<h2>` (project list page) render in the sticky title band via
+ * the `titleline` block, not here — this row now holds only the show-done
+ * toggle, so it right-aligns its sole child instead of space-between. */
+.ticket-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.ticket-list-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+/* Ticket 164 requirement 197: the project title never wraps and shows the
+ * full name via its `title` attribute on hover, the same truncation rule
+ * `.ticket-head-line h1` applies to the ticket title below. */
+.ticket-list-title h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Always-visible "create ticket" button next to the project title (ticket
+ * 160 task 1433, requirements 154/155) — unlike `.row-view-link`, this is
+ * not a hover-reveal affordance, so it carries none of that opacity
+ * mechanism. */
+/* Ticket 164 task 1592: the ticket page's round IDE ("i") button joins this
+ * selector list instead of duplicating the circle shape — same 26x26px
+ * accent-soft circle, single character, as the "+" button below. */
+.create-ticket-btn,
+.ticket-ide-btn {
+  appearance: none;
+  border: 1px solid var(--accent-soft);
+  background: none;
+  color: var(--accent);
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  border-radius: 50%;
+  font-size: 17px;
+  font-family: var(--sans);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.create-ticket-btn:hover,
+.create-ticket-btn:focus-visible,
+.ticket-ide-btn:hover,
+.ticket-ide-btn:focus-visible {
+  background: var(--accent-soft);
+  color: var(--bg);
+}
+.create-ticket-btn:focus-visible,
+.ticket-ide-btn:focus-visible {
+  outline: 1px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+.toggle-form {
+  font-size: 14px;
+  margin-right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.toggle-form input {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--ok);
+  flex: 0 0 auto;
+}
+.toggle-form label {
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-muted);
+  transition: color 120ms ease-out;
+}
+.toggle-form.is-on label { color: var(--text); }
+.toggle-form label:hover,
+.toggle-form.is-on label:hover { color: var(--accent); }
+
+.ticket-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ticket-row { border-top: 1px solid var(--rule); }
+.ticket-row:last-child { border-bottom: 1px solid var(--rule); }
+.ticket-row a {
+  display: grid;
+  width: 100%;
+  /* name+id is the only flexible column, so it claims all the spare
+     width and the title truncates as late as possible. Each right-aligned
+     cell is pinned to its own column below (date=3, type=4, priority=5,
+     status=last via -2/-1) so every row's columns align across the list. */
+  grid-template-columns: 16px minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 4px;
+  color: var(--text);
+  transition: background 100ms ease-out;
+}
+.ticket-row a:hover { background: var(--surface); }
+.ticket-row a:hover .ticket-id { color: var(--accent); }
+.ticket-row .ticket-date {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text-faint);
+  grid-column: 3;
+  justify-self: center;
+}
+.ticket-name-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.ticket-row .ticket-objective {
+  font-size: 16px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ticket-row .status-word {
+  font-size: 13px;
+  color: var(--text-faint);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+  /* Negative line indices always resolve to the last track, so this stays
+   * correct even if the number of tracks before it changes. */
+  grid-column: -2 / -1;
+  justify-self: center;
+}
+.ticket-row[data-status="done"]    .status-word { color: var(--ok); }
+.ticket-row[data-status="review"]  .status-word { color: var(--review); }
+.ticket-row[data-status="failed"]  .status-word { color: var(--failed); }
+.ticket-row[data-status="active"] .ticket-id,
+.ticket-row[data-status="active"] .status-word {
+  color: var(--accent);
+}
+.ticket-row[data-status="blocked"] .status-word { color: var(--failed); }
+
+/* ---------- Priority chip ----------
+ *
+ * Three levels — high, medium, low — render as plain coloured text
+ * matching the status-word styling (font-size, letter-spacing,
+ * min-width, alignment). The colour comes from the existing semantic
+ * tokens (--failed for high, --review for medium, --text-muted for
+ * low). No background pill, no bold weight — visual distinction is
+ * carried by colour alone, in parity with how the status word reads.
+ *
+ * Tickets without a priority render an empty `.priority-chip.is-empty`
+ * span so the grid column slot stays aligned; `visibility: hidden`
+ * keeps the layout intact without drawing anything.
+ */
+.priority-chip {
+  display: inline-block;
+  font-size: 13px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+.priority-chip-high   { color: var(--failed); }
+.priority-chip-medium { color: var(--review); }
+.priority-chip-low    { color: var(--text-muted); }
+.priority-chip.is-empty {
+  visibility: hidden;
+}
+
+/* ---------- Deep ticket view: head ----------
+ *
+ * As of ticket 164, `.ticket-head-line` (title, id, type, status, view and
+ * IDE buttons) moved out of `.ticket-head` into the sticky title band
+ * (rendered via the `titleline` block; see `.site-header-title` above), so
+ * it carries its own `data-status` now instead of inheriting one from a
+ * `.ticket-head` ancestor. `.ticket-head` itself is left holding only the
+ * objective paragraph, rendered when present. */
+
+.ticket-head-line {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+/* Ticket 164 requirement 197: the ticket title never wraps and shows the
+ * full name via its `title` attribute on hover. */
+.ticket-head-line h1 {
+  font-family: var(--mono);
+  font-size: 19px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.ticket-head-line .ticket-status {
+  font-size: 13px;
+  color: var(--text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+.ticket-head-line[data-status="active"]  .ticket-status { color: var(--accent); }
+.ticket-head-line[data-status="blocked"] .ticket-status { color: var(--failed); }
+.ticket-head-line[data-status="done"]    .ticket-status { color: var(--ok); }
+.ticket-head-line[data-status="review"]  .ticket-status { color: var(--review); }
+.ticket-head-line[data-status="failed"]  .ticket-status { color: var(--failed); }
+.ticket-type {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ticket-head-line .ticket-type {
+  flex: 0 0 auto;
+}
+.ticket-row .ticket-type {
+  align-self: center;
+  grid-column: 4;
+  justify-self: center;
+}
+.ticket-row .ticket-priority {
+  grid-column: 5;
+  justify-self: center;
+}
+.ticket-head .objective {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* Fixed line-clamp truncation (ticket 153 task 1271). Applied to the
+ * ticket objective, the ticket AI description, and each phase's
+ * description/AI description. Reading the full text now happens by
+ * opening the corresponding entity's panel (ticket 153 tasks 1268/1269),
+ * so these excerpts on the page itself have no expand control. */
+.text-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Ticket 164 task 1592: wraps the round IDE button at the right end of the
+ * ticket title row. `margin-left: auto` pushes it to the row's right edge;
+ * `flex: 0 0 auto` keeps the group a fixed size so title truncation
+ * (requirement 197) never eats into it. */
+.ticket-head-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+/* ---------- Deep ticket view: details (ai-description) section ---------- */
+
+.ai-description {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* ---------- Requirements ----------
+ *
+ * Read-only list of ticket requirements. Each row carries a small
+ * verification-marker on the left (hollow for unverified, filled-green for
+ * met, filled-red for unmet) and a verification-word label on the right.
+ * The three states use CSS attribute selectors on data-verification so the
+ * shape and colour change without JavaScript.
+ */
+
+.requirement {
+  border-top: 1px solid var(--rule);
+}
+.requirement:last-of-type { border-bottom: 1px solid var(--rule); }
+.requirement > summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 4px;
+  padding-inline-start: 0;
+  cursor: pointer;
+  list-style: none;
+}
+.requirement > summary::-webkit-details-marker { display: none; }
+
+.requirement > summary:hover { background: var(--surface); }
+.requirement > summary:hover .requirement-name { color: var(--accent); }
+
+.verification-marker {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  position: relative;
+}
+.verification-marker::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.requirement[data-verification="unverified"] .verification-marker::before {
+  content: '○';
+  color: var(--text-faint);
+  font-size: 11px;
+}
+.requirement[data-verification="met"] .verification-marker::before {
+  content: '✓';
+  color: var(--ok);
+  font-size: 12px;
+}
+.requirement[data-verification="unmet"] .verification-marker::before {
+  content: '✗';
+  color: var(--failed);
+  font-size: 11px;
+}
+
+.requirement-name-wrap,
+.question-name-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.requirement-name,
+.question-name {
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.requirement[open] .requirement-name,
+.question[open] .question-name {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.verification-word {
+  font-size: 13px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+  min-width: 80px;
+  text-align: center;
+}
+.requirement[data-verification="met"]  .verification-word { color: var(--ok); }
+.requirement[data-verification="unmet"] .verification-word { color: var(--failed); }
+
+.requirement-desc {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 6px calc(16px + 16px);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- Questions ----------
+ *
+ * Read-only list of a ticket's questions (requirements 367/368/386). Each
+ * row carries a group marker on the left, matching `.verification-marker`'s
+ * mechanism but keyed on `data-group` instead of `data-verification`: the
+ * three groups every question listing in the toolset agrees on — `open`
+ * ("needs you"), `resolved_unprocessed` ("needs agent"), `done` — read the
+ * same glyphs already used elsewhere for the same meaning (hollow circle for
+ * not-yet-settled, warning triangle for flagged/needs-a-look, checkmark for
+ * done), so no new colour is introduced and `--accent` (reserved for the
+ * `active` entity status, see design-system.md §1) stays untouched. `kind`
+ * (ask/check) and `state` (open, or the resolution once resolved: accepted,
+ * answered, withdrawn) render as plain uppercase words, the same idiom as
+ * `.verification-word`/`.ticket-type`. The detail block below each row sits
+ * inside a native `<details>`/`<summary>` (ticket 198 task 2364), collapsed
+ * by default and disclosed by clicking the row — a passive display toggle,
+ * not a new interactive control, since requirement 368 still rules out
+ * inventing new controls (no detail screen, no editable fields) for this v1.
+ */
+
+.question {
+  border-top: 1px solid var(--rule);
+}
+.question:last-of-type { border-bottom: 1px solid var(--rule); }
+.question > summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 4px;
+  padding-inline-start: 0;
+  cursor: pointer;
+  list-style: none;
+}
+.question > summary::-webkit-details-marker { display: none; }
+
+.question > summary:hover { background: var(--surface); }
+.question > summary:hover .question-name { color: var(--accent); }
+
+.question-group-marker {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  position: relative;
+}
+.question-group-marker::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.question[data-group="open"] .question-group-marker::before {
+  content: '⚠';
+  color: var(--failed);
+  font-size: 11px;
+}
+.question[data-group="resolved_unprocessed"] .question-group-marker::before {
+  content: '⚠';
+  color: var(--review);
+  font-size: 11px;
+}
+.question[data-group="done"] .question-group-marker::before {
+  content: '✓';
+  color: var(--ok);
+  font-size: 12px;
+}
+
+.question-kind {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+  min-width: 80px;
+  text-align: center;
+}
+
+.question-state {
+  font-size: 13px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+  min-width: 80px;
+  text-align: center;
+}
+
+.question-group-label {
+  font-size: 13px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+  min-width: 90px;
+  text-align: center;
+}
+.question[data-group="open"] .question-group-label { color: var(--failed); }
+.question[data-group="resolved_unprocessed"] .question-group-label { color: var(--review); }
+.question[data-group="done"] .question-group-label { color: var(--ok); }
+
+.question-detail {
+  margin: 0 0 6px calc(16px + 16px);
+}
+.question-detail-field {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 4px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.question-detail-field strong {
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+/* ---------- Phases & tasks ----------
+ *
+ * Every row container (phase summary, phase body, task summary, task
+ * body) uses the SAME 4-column grid template. Because every container
+ * is the same width (block-level inside .phases), the column positions
+ * resolve identically in each grid — phase statuses and task statuses
+ * land in pixel-exactly the same x position.
+ *
+ *   col 1: phase marker (16px)
+ *   col 2: task marker  (16px)
+ *   col 3: text         (1fr)
+ *   col 4: status       (80px)
+ *   gap:   16px
+ *
+ * Phase rows: marker col 1, name col 2-3, status col 4.
+ * Task rows : empty col 1, marker col 2, title col 3, status col 4.
+ * Phase descriptions span col 2-3; task descriptions sit in col 3 only.
+ */
+
+.phase {
+  border-top: 1px solid var(--rule);
+}
+.phase:last-of-type { border-bottom: 1px solid var(--rule); }
+
+.phase > summary,
+.task,
+.phase-body,
+.task-body {
+  display: grid;
+  grid-template-columns: 16px 16px minmax(0, 1fr) 80px;
+  column-gap: 16px;
+}
+
+.phase > summary,
+.task {
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background 100ms ease-out;
+}
+.phase > summary > .phase-status,
+.task > .task-status {
+  justify-self: center;
+  min-width: 80px;
+  text-align: center;
+}
+.phase > summary::-webkit-details-marker { display: none; }
+
+.phase > summary {
+  padding: 8px 4px;
+  padding-inline-start: 0;
+}
+.phase > summary > .marker          { grid-column: 1; }
+.phase > summary > .phase-name-wrap { grid-column: 2 / 4; }
+.phase > summary > .phase-status    { grid-column: 4; }
+
+.phase > summary:hover { background: var(--surface); }
+.phase > summary:hover .phase-name { color: var(--accent); }
+
+.phase-name-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.phase-name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.phase-attempts {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+}
+
+
+.phase-id,
+.task-id,
+.ticket-id,
+.ticket-head-id,
+.project-id,
+.requirement-id,
+.question-id {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+}
+
+.phase-status,
+.task-status {
+  font-size: 13px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.phase[data-status="active"]  .phase-status { color: var(--accent); }
+.phase[data-status="blocked"] .phase-status { color: var(--failed); }
+.phase[data-status="done"]    .phase-status { color: var(--ok); }
+.phase[data-status="review"]  .phase-status { color: var(--review); }
+.phase[data-status="failed"]  .phase-status { color: var(--failed); }
+
+/* Click-to-cycle status affordance (ticket 159). The underline sits at
+ * transparent opacity at rest and fades in on hover via a
+ * text-decoration-color transition, so the status word's own colour
+ * (set by the [data-status] rules above) is never touched and no
+ * layout shift occurs. */
+.status-cycle {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease-out;
+}
+.status-cycle:hover,
+.status-cycle:focus-visible {
+  text-decoration-color: currentcolor;
+}
+
+/* Phase body uses the same 4-column template. Phase descriptions span
+ * col 2-3 (aligned with the phase name in the row above); the tasks
+ * list spans all four columns so each task carries the same width and
+ * its own 4-column grid lands its status in col 4 — directly under the
+ * phase status. The tasks list is itself NOT a grid; each <li> renders
+ * the task `<details>` which has its own grid summary/body. */
+.phase-body {
+  row-gap: 4px;
+  padding: 0 0 8px;
+}
+.phase-body > .phase-desc,
+.phase-body > .phase-ai-desc,
+.phase-body > .phase-sep,
+.phase-body > .phase-empty {
+  grid-column: 2 / 4;
+}
+.phase-body > .tasks {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 2px 0 6px;
+  padding: 0;
+}
+
+.task {
+  padding: 4px 4px;
+  border-radius: 3px;
+}
+.task > .marker          { grid-column: 2; }
+.task > .task-title-wrap { grid-column: 3; }
+.task > .task-status     { grid-column: 4; }
+
+.task:hover { background: var(--surface); }
+.task:hover .task-title { color: var(--accent); }
+
+.task-actor {
+  font-size: 0.85em;
+  flex: 0 0 auto;
+}
+
+.task-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.task-title {
+  font-size: 16px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.task-attempts {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+}
+.task-model {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.task[data-status="active"]  .task-status { color: var(--accent); }
+.task[data-status="blocked"] .task-status { color: var(--failed); }
+.task[data-status="done"]    .task-status { color: var(--ok); }
+.task[data-status="review"]  .task-status { color: var(--review); }
+.task[data-status="failed"]  .task-status { color: var(--failed); }
+
+/* Selected task row: stays gold while its side-panel is open so the
+ * user can see which row the panel belongs to. The JS adds .is-open
+ * on openTask and removes it on the dialog 'close' event. */
+.task.is-open .task-title { color: var(--accent); }
+.task.is-open { background: var(--surface); }
+
+/* Task body uses the same 4-column template; its content lives in
+ * column 3 (text column), directly under the task title in the row
+ * above. Horizontal padding matches the task summary's `4px 4px` so
+ * both grids resolve at the same x-positions — description aligns
+ * exactly under the title. */
+.task-body {
+  row-gap: 6px;
+  padding: 4px 4px 8px;
+}
+.task-body > * {
+  grid-column: 3;
+}
+
+.task-desc {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+.phase-desc {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.phase-sep {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 8px 0;
+}
+
+.phase-ai-desc {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0.7;
+}
+
+/* ---------- Result block ----------
+ *
+ * For done tasks with a result_summary the body leads with one line:
+ *   [glyph] summary text
+ *
+ * The description (mono) and result_details (technical) both live behind
+ * the same `details ▾` toggle — one click reveals everything technical.
+ */
+
+/* The task result line is the one-line outcome of a finished task.
+ * No glyph, no separate row — when the task has hidden extras
+ * (description above, ai-result below), a small triangle label sits
+ * inline at the end of the result text and toggles them. Status is
+ * already signalled on the row above; no need to repeat the colour
+ * on the result. */
+.task-result {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 14px;
+}
+.task-result-text {
+  color: var(--text);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.task-result-text.is-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* Description (above summary) and result_details (below summary) are
+ * BOTH controlled by the same checkbox via the general-sibling combinator.
+ * The checkbox sits at the top of .task-body and walks forward through
+ * .extras-desc, then .task-result, then .extras-details. */
+.task-extras-toggle { display: none; }
+.task-extras-toggle ~ .extras-desc,
+.task-extras-toggle ~ .extras-details {
+  display: none;
+}
+.task-extras-toggle:checked ~ .extras-desc,
+.task-extras-toggle:checked ~ .extras-details {
+  display: block;
+}
+
+.extras-desc .task-desc { color: var(--text-muted); margin: 0; }
+.extras-details {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: 3px;
+}
+
+/* Inline fold control at the end of the task-result line. The label
+ * is a sibling of the hidden checkbox via the task body order:
+ * checkbox → extras-desc → task-result (containing this label) →
+ * extras-details. */
+.task-extras-label {
+  color: var(--text-faint);
+  cursor: pointer;
+  user-select: none;
+  transition: color 120ms ease-out;
+}
+.task-extras-label:hover { color: var(--text); }
+.task-extras-label::before { content: "▾"; }
+.task-extras-toggle:checked ~ .task-result .task-extras-label::before { content: "▴"; }
+
+/* ---------- Log ----------
+ *
+ * Newest entry on top. The whole entry list is collapsed by default
+ * behind a section-level CSS-only fold, the same checkbox+label sibling-
+ * combinator trick used elsewhere in this file (e.g. `.requirements-toggle`,
+ * `.phases-toggle`) — the #logs-toggle checkbox precedes .log-entries, its checked
+ * state reveals the list, the label follows. Each entry is one line: a
+ * small type badge in the gutter column, the human one-line title, then a
+ * mono timestamp aligned to the right edge. When an entry has detail text,
+ * it is wrapped in a <details>/<summary> element; the browser triangle
+ * appears in front of the entry line and expands the detail inline.
+ */
+
+.log-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The log row container — .log-entry — is the master 4-column grid.
+ * When an entry has a detail, a checkbox + label render the row and
+ * an extra .log-detail div lives as a direct sibling in column 3.
+ * Plain entries put their four spans directly in the grid.
+ *
+ *   col 1: log level (60px)
+ *   col 2: log type  (90px)
+ *   col 3: title     (1fr)
+ *   col 4: timestamp (140px)
+ *   gap:   12px
+ */
+.log-entry,
+.log-entry > .log-row {
+  display: grid;
+  grid-template-columns: 90px 90px minmax(0, 1fr) 140px;
+  align-items: baseline;
+  column-gap: 12px;
+}
+
+.log-entry {
+  padding: 10px 0 8px;
+  border-top: 1px solid var(--rule);
+}
+.logs > .log-entries > .log-entry:first-child { border-top: none; }
+
+.log-entry > .log-row {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.log-entry > .log-row:hover .log-title { color: var(--accent); }
+
+.log-detail-toggle { display: none; }
+.log-entry > .log-detail { display: none; }
+.log-detail-toggle:checked ~ .log-detail { display: block; }
+
+.log-level {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.log-type {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.log-title {
+  font-size: 16px;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-width: 0;
+}
+.log-time {
+  font-size: 13px;
+  color: var(--text-faint);
+  justify-self: end;
+}
+
+.log-entry > .log-detail {
+  grid-column: 3;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 4px 0 0;
+}
+.log-detail-toggle:checked ~ .log-detail { display: block; }
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+
+/* ---------- Task side panel (dialog) ----------
+ *
+ * The full task detail renders inside a <dialog class="task-panel">
+ * that slides in from the right edge. It does not block the page —
+ * the backdrop is transparent — so the user can still see the task
+ * list context behind it. Width clamps so it stays readable on wide
+ * monitors while collapsing to full-screen on narrow viewports.
+ */
+
+dialog.task-panel {
+  width: clamp(520px, 60vw, 880px);
+  max-width: calc(100vw - 32px);
+  max-height: 85vh;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+dialog.task-panel[open] {
+  opacity: 1;
+  transform: scale(1);
+}
+dialog.task-panel::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.task-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+}
+.task-panel-header .marker {
+  margin-top: 9px;
+  flex: 0 0 16px;
+}
+.task-panel-header h2 {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--accent);
+  margin: 0;
+  line-height: 1.35;
+  word-wrap: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.task-panel-header .task-panel-id {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.task-panel-body {
+  max-height: calc(85vh - 76px);
+  overflow-y: auto;
+  padding: 4px 24px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.task-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.task-panel-section:last-child {
+  border-bottom: 0;
+}
+.task-panel-section.is-ai {
+  background: var(--surface-2);
+  margin: 0 -12px;
+  padding: 16px 12px;
+  border-radius: 4px;
+  border-bottom: 0;
+}
+.task-panel-section.is-ai + .task-panel-section {
+  border-top: 1px solid var(--rule);
+}
+.task-panel-body h3 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+  opacity: 0.85;
+}
+.task-panel-section.is-ai h3 {
+  color: var(--text-faint);
+  opacity: 1;
+}
+.task-panel-body p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.task-panel-section.is-ai p {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.task-panel-body .mono,
+.task-panel-body pre {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 3px;
+}
+
+.task-panel-meta dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 16px;
+  row-gap: 4px;
+  margin: 0;
+  font-size: 14px;
+}
+.task-panel-meta dt {
+  color: var(--text-faint);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.task-panel-meta dd {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.task-panel-transitions,
+.task-panel-logs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.task-panel-transitions li,
+.task-panel-logs li {
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.task-panel-transitions li:first-child,
+.task-panel-logs li:first-child {
+  border-top: 0;
+}
+.task-panel-transitions time,
+.task-panel-logs time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.task-panel-logs .log-title {
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* ---------- Row hover-reveal view link + panel edit-lock mode ----------
+ * (ticket 153 task 1267, requirements 126/127)
+ *
+ * `.row-view-link` sits inside a hoverable row container (`.ticket-head-line`,
+ * `.phase > summary`, `.task`) and is invisible until that row is hovered or
+ * the link itself receives keyboard focus. It opens the corresponding panel
+ * read-only — it is never labelled "edit". The opacity transition uses the
+ * same 120ms timing as the other hover transitions in §8.1 of
+ * design-system.md; no new animation style is introduced.
+ *
+ * A panel (the element carrying `data-mode`) starts in `data-mode="view"`.
+ * `.edit-lock` is a button inside that panel; clicking it (handled in
+ * app.js) flips the panel's `data-mode` between "view" and "edit". The
+ * glyph is rendered via a `::before` pseudo-element keyed on the ancestor
+ * `data-mode`, the same pattern already used for `.marker` and
+ * `.verification-marker`.
+ *
+ * `.panel-view` (read-only display) and `.panel-edit` (the edit `<form>`)
+ * are both always rendered by the server; CSS shows exactly one at a time
+ * based on the same `data-mode` attribute. `display: contents` is used
+ * instead of `display: none` / `block` so the shown wrapper does not add
+ * an extra box to panels that lay out their children with flex/grid.
+ */
+
+.row-view-link {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  cursor: pointer;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+.ticket-head-line:hover .row-view-link,
+.phase > summary:hover .row-view-link,
+.task:hover .row-view-link,
+.row-view-link:focus-visible {
+  opacity: 1;
+}
+.row-view-link:hover,
+.row-view-link:focus-visible {
+  color: var(--accent);
+}
+.row-view-link:focus-visible {
+  outline: 1px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.edit-lock {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-faint);
+}
+.edit-lock:hover,
+.edit-lock:focus-visible {
+  color: var(--accent);
+}
+[data-mode="view"] .edit-lock::before { content: '🔒'; }
+[data-mode="edit"] .edit-lock::before { content: '🔓'; }
+
+.task-panel-header .edit-lock {
+  margin-top: 6px;
+  flex: 0 0 auto;
+}
+
+.panel-view,
+.panel-edit {
+  display: none;
+}
+[data-mode="view"] .panel-view,
+[data-mode="edit"] .panel-edit {
+  display: contents;
+}
+
+/* ---------- Ticket, phase & task edit panel forms (ticket 153, tasks 1268/1269/1270); create-ticket popup form (ticket 160, task 1433) ----------
+ *
+ * dialog#ticket-panel, dialog#phase-panel, and dialog#task-panel all reuse
+ * dialog.task-panel's structural styling verbatim (see the class-based
+ * selectors above) — the "styled identically to #task-panel" requirement is
+ * met by sharing the class, not by duplicating rules. `.ticket-edit-*`
+ * (ticket panel, task 1268), `.phase-edit-*` (phase panel, task 1269), and
+ * `.task-edit-*` (task panel, task 1270) name the same form shape per
+ * entity rather than sharing one class, matching the existing convention of
+ * prefixing edit-form classes with the entity they belong to; the rules
+ * below are declared once with a combined selector so all three stay
+ * visually identical without duplicating declarations. The always-visible
+ * read-only columns reuse `.task-panel-meta` unchanged.
+ *
+ * `.create-ticket-*` (dialog#create-ticket-panel, ticket 160 task 1433)
+ * follows the same per-entity naming convention and joins the same combined
+ * selectors below, so the create-ticket popup looks identical to the
+ * ticket/phase/task edit forms even though it is a create form, not an edit
+ * form re-opened on an existing entity.
+ */
+
+.ticket-edit-error,
+.phase-edit-error,
+.task-edit-error,
+.create-ticket-error {
+  margin: 0 0 16px;
+  padding: 8px 0 0;
+  font-size: 14px;
+  color: var(--failed);
+  border-top: 1px solid var(--failed);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.ticket-edit-form,
+.phase-edit-form,
+.task-edit-form,
+.create-ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ticket-edit-field,
+.phase-edit-field,
+.task-edit-field,
+.create-ticket-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ticket-edit-field label,
+.phase-edit-field label,
+.task-edit-field label,
+.create-ticket-field label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ticket-edit-field input[type="text"],
+.ticket-edit-field textarea,
+.phase-edit-field input[type="text"],
+.phase-edit-field textarea,
+.task-edit-field input[type="text"],
+.task-edit-field input[type="number"],
+.task-edit-field textarea,
+.task-edit-field select,
+.create-ticket-field input[type="text"],
+.create-ticket-field textarea,
+.create-ticket-field select {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.ticket-edit-field textarea,
+.phase-edit-field textarea,
+.task-edit-field textarea,
+.create-ticket-field textarea {
+  min-height: 90px;
+}
+.task-edit-field input[type="number"] {
+  max-width: 120px;
+}
+.ticket-edit-field input[type="text"]:focus,
+.ticket-edit-field textarea:focus,
+.phase-edit-field input[type="text"]:focus,
+.phase-edit-field textarea:focus,
+.task-edit-field input[type="text"]:focus,
+.task-edit-field input[type="number"]:focus,
+.task-edit-field textarea:focus,
+.task-edit-field select:focus,
+.create-ticket-field input[type="text"]:focus,
+.create-ticket-field textarea:focus,
+.create-ticket-field select:focus {
+  outline: none;
+  border-color: var(--accent-soft);
+}
+.ticket-edit-actions,
+.phase-edit-actions,
+.task-edit-actions,
+.create-ticket-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.ticket-edit-save,
+.phase-edit-save,
+.task-edit-save,
+.create-ticket-save {
+  appearance: none;
+  border: 1px solid var(--accent-soft);
+  background: none;
+  color: var(--accent);
+  padding: 6px 16px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.ticket-edit-save:hover,
+.ticket-edit-save:focus-visible,
+.phase-edit-save:hover,
+.phase-edit-save:focus-visible,
+.task-edit-save:hover,
+.task-edit-save:focus-visible,
+.create-ticket-save:hover,
+.create-ticket-save:focus-visible {
+  background: var(--accent-soft);
+  color: var(--bg);
+}
+.create-ticket-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+  background: none;
+  color: var(--accent);
+}
+
+/* ---------- Terminal error dialog ----------
+ *
+ * <dialog id="terminal-error"> reports a failed IDE-open request or status
+ * update (see app.js). Unlike dialog.task-panel, which is a right-pinned
+ * side sheet, this dialog uses the browser's native <dialog> centering so
+ * it reads as a plain, unmissable alert. The backdrop is darker than
+ * task-panel's and the dialog carries a red top border so it is visually
+ * distinct from ordinary UI chrome.
+ */
+
+dialog#terminal-error {
+  width: clamp(320px, 90vw, 480px);
+  margin: auto;
+  padding: 20px 24px 24px;
+  border: 0;
+  border-top: 3px solid var(--failed);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+dialog#terminal-error::backdrop {
+  background: rgba(0, 0, 0, 0.75);
+}
+.terminal-error-close {
+  appearance: none;
+  border: none;
+  background: none;
+  float: right;
+  margin: -8px -8px 0 12px;
+  padding: 4px 8px;
+  font-family: var(--sans);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.terminal-error-close:hover,
+.terminal-error-close:focus-visible {
+  color: var(--text);
+}
+.terminal-error-message {
+  margin: 4px 0 0;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* ---------- Narrow viewport (sub-half-monitor) ---------- */
+
+@media (max-width: 640px) {
+  :root { --pad-x: 16px; }
+  main { padding: 24px var(--pad-x) 64px; }
+  .ticket-row a {
+    grid-template-columns: 16px 1fr auto;
+  }
+  .ticket-row .ticket-id,
+  .ticket-row .ticket-date,
+  .ticket-row .ticket-type,
+  .ticket-row .ticket-priority { display: none; }
+
+  /* On narrow viewports the centered modal expands to full-screen —
+   * borders, radius, and the outer drop shadow are dropped since the
+   * dialog covers the whole viewport. */
+  dialog.task-panel {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100vh;
+    height: 100vh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .task-panel-body {
+    max-height: calc(100vh - 76px);
+  }
+}

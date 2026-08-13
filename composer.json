@@ -1,0 +1,66 @@
+{
+    "name": "ai-toolset/ai-dashboard",
+    "description": "Web dashboard for the ai-toolset task manager",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "ai-toolset/ai-lib": "dev-main",
+        "ai-toolset/tm": "dev-main",
+        "php-collective/toml": "^0.1",
+        "symfony/event-dispatcher": "^7.0",
+        "symfony/http-foundation": "^7.0",
+        "symfony/http-kernel": "^7.0",
+        "symfony/routing": "^7.0",
+        "twig/twig": "^3.0"
+    },
+    "require-dev": {
+        "deptrac/deptrac": "^4.6",
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.0",
+        "rector/rector": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AiToolset\\AiDashboard\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AiToolset\\AiDashboard\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/ai-dashboard"
+    ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/mennozweistra/ai-lib"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/mennozweistra/ai-tm"
+        }
+    ],
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse --memory-limit=256M",
+        "fix": "php-cs-fixer fix",
+        "deptrac": "out=$(deptrac analyse --no-progress 2>&1); rc=$?; printf '%s\n' \"$out\"; printf '%s' \"$out\" | grep -q 'Syntax Error' && { echo 'deptrac: files failed to parse and were silently excluded from the graph'; exit 1; }; exit $rc",
+        "rector": "rector process",
+        "ci": [
+            "@test",
+            "@stan",
+            "php-cs-fixer fix --dry-run --diff",
+            "@deptrac",
+            "rector process --dry-run"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

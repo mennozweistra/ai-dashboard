@@ -1,0 +1,359 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ model.header.id }} - {{ model.header.name }}{% endblock %}
+
+{% block breadcrumb %}
+    <a href="/" class="home">tm</a>
+    <span class="sep">›</span> <a href="/?project={{ model.projectId }}">{{ model.projectName }}</a>
+{% endblock %}
+
+{% block titleline %}
+    <div class="ticket-head-line" data-status="{{ model.header.status }}">
+        <h1 title="{{ model.header.name }}">{{ model.header.name }}</h1>
+        <span class="ticket-head-id">[{{ model.header.id }}]</span>
+        <span class="ticket-type">{{ model.header.type }}</span>
+        <span class="ticket-status">{{ model.header.status }}</span>
+        <button type="button" class="row-view-link" data-ticket-id="{{ model.header.id }}">view</button>
+        <div class="ticket-head-buttons">
+            {% if model.ideConfigured %}
+            <button type="button" class="ticket-ide-btn" data-ticket-id="{{ model.header.id }}" title="open IDE">i</button>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{% if model.header.objective %}
+<section class="ticket-head">
+    <p class="objective text-clamp">{{ model.header.objective }}</p>
+</section>
+{% endif %}
+
+<dialog id="ticket-panel" class="task-panel" data-mode="{% if model.editOpen %}edit{% else %}view{% endif %}"{% if model.editOpen %} data-open-on-load{% endif %}>
+    <header class="task-panel-header" data-status="{{ model.header.status }}">
+        <span class="marker marker-{{ model.header.status }}" aria-hidden="true"></span>
+        <h2>{{ model.header.name }} <span class="task-panel-id">[{{ model.header.id }}]</span></h2>
+        <button type="button" class="edit-lock" aria-label="Toggle edit mode"></button>
+    </header>
+    <div class="task-panel-body">
+        <section class="task-panel-section task-panel-meta">
+            <dl>
+                <dt>Id</dt><dd>{{ model.header.id }}</dd>
+                <dt>Project</dt><dd>{{ model.header.projectId }}</dd>
+                <dt>Status</dt><dd>{{ model.header.status }}</dd>
+                <dt>Type</dt><dd>{{ model.header.type }}</dd>
+                <dt>Created</dt><dd>{{ model.header.createdAt }}</dd>
+                <dt>Updated</dt><dd>{{ model.header.updatedAt }}</dd>
+                <dt>Archived</dt><dd>{{ model.header.archivedAt }}</dd>
+                <dt>Session</dt><dd>{{ model.header.sessionId }}</dd>
+                <dt>Priority</dt><dd>{{ model.header.priority }}</dd>
+            </dl>
+        </section>
+        <div class="panel-view">
+            <section class="task-panel-section"><h3>Name</h3><p>{{ model.header.name }}</p></section>
+            <section class="task-panel-section"><h3>Description</h3><p>{{ model.header.objective }}</p></section>
+            <section class="task-panel-section is-ai"><h3>AI description</h3><p>{{ model.header.aiDescription }}</p></section>
+        </div>
+        <div class="panel-edit">
+            {% if model.editError %}
+                <div class="ticket-edit-error">{{ model.editError }}</div>
+            {% endif %}
+            <form class="ticket-edit-form" method="post" action="/ticket/{{ model.header.id }}/edit">
+                <div class="ticket-edit-field">
+                    <label for="ticket-edit-name">Name</label>
+                    <input type="text" id="ticket-edit-name" name="name" value="{{ model.editName }}">
+                </div>
+                <div class="ticket-edit-field">
+                    <label for="ticket-edit-description">Description</label>
+                    <textarea id="ticket-edit-description" name="description">{{ model.editDescription }}</textarea>
+                </div>
+                <div class="ticket-edit-field">
+                    <label for="ticket-edit-ai-description">AI description</label>
+                    <textarea id="ticket-edit-ai-description" name="ai_description">{{ model.editAiDescription }}</textarea>
+                </div>
+                <div class="ticket-edit-actions">
+                    <button type="submit" class="ticket-edit-save">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</dialog>
+
+<section class="ai-details">
+    <input type="checkbox" id="details-toggle" class="details-toggle" checked>
+    <h2 class="section-label"><label for="details-toggle">Details</label></h2>
+    {% if model.header.aiDescription %}
+        <div class="ai-description">{{ model.header.aiDescription }}</div>
+    {% else %}
+        <p class="empty">No details.</p>
+    {% endif %}
+</section>
+
+<section class="requirements">
+    <input type="checkbox" id="requirements-toggle" class="requirements-toggle" checked>
+    <h2 class="section-label"><label for="requirements-toggle">Requirements</label></h2>
+    {% if model.requirements is empty %}
+        <p class="empty">No requirements.</p>
+    {% else %}
+        <div class="requirements-list">
+            {% for req in model.requirements %}
+                <details class="requirement" data-verification="{{ req.verification }}">
+                    <summary>
+                        <span class="verification-marker"></span>
+                        <span class="requirement-name-wrap">
+                            <span class="requirement-name">{{ req.name }}</span>
+                            <span class="requirement-id">[{{ req.id }}]</span>
+                        </span>
+                        <span class="verification-word">{{ req.verification }}</span>
+                    </summary>
+                    {% if req.description %}
+                        <p class="requirement-desc">{{ req.description }}</p>
+                    {% endif %}
+                </details>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+
+<section class="questions">
+    <input type="checkbox" id="questions-toggle" class="questions-toggle" checked>
+    <h2 class="section-label"><label for="questions-toggle">Questions</label></h2>
+    {% if model.questions is empty %}
+        <p class="empty">No questions.</p>
+    {% else %}
+        <div class="questions-list">
+            {% for q in model.questions %}
+                <details class="question" data-group="{{ q.group }}">
+                    <summary>
+                        <span class="question-group-marker" aria-hidden="true"></span>
+                        <span class="question-name-wrap">
+                            <span class="question-name">{{ q.name }}</span>
+                            <span class="question-id">[{{ q.id }}]</span>
+                        </span>
+                        <span class="question-kind">{{ q.kind }}</span>
+                        <span class="question-state">{{ q.state }}</span>
+                        <span class="question-group-label">{{ q.groupLabel }}</span>
+                    </summary>
+                    <div class="question-detail">
+                        <p class="question-detail-field"><strong>Question</strong> {{ q.question }}</p>
+                        {% if q.background %}<p class="question-detail-field"><strong>Background</strong> {{ q.background }}</p>{% endif %}
+                        {% if q.recommendation %}<p class="question-detail-field"><strong>Recommendation</strong> {{ q.recommendation }}</p>{% endif %}
+                        {% if q.answer %}<p class="question-detail-field"><strong>Answer</strong> {{ q.answer }}</p>{% endif %}
+                    </div>
+                </details>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+
+<section class="phases">
+    <input type="checkbox" id="phases-toggle" class="phases-toggle" checked>
+    <h2 class="section-label"><label for="phases-toggle">Phases</label></h2>
+    {% if model.phases is empty %}
+        <p class="empty">No plan yet for this ticket.</p>
+    {% else %}
+        {% for phase in model.phases %}
+            <details class="phase" data-phase-id="{{ phase.id }}" data-status="{{ phase.status }}">
+                <summary>
+                    <span class="marker marker-{{ phase.status }}" aria-hidden="true"></span>
+                    <span class="phase-name-wrap">
+                        <span class="phase-name">{{ phase.name|strip_phase_prefix }}</span>
+                        {% if phase.maxAttempts > 0 %}<span class="phase-attempts">({{ phase.attempts }}/{{ phase.maxAttempts }} runs)</span>{% endif %}
+                        <span class="phase-id">[{{ phase.id }}]</span>
+                        <button type="button" class="row-view-link" data-phase-id="{{ phase.id }}">view</button>
+                    </span>
+                    <span class="phase-status status-cycle">{{ phase.status }}</span>
+                </summary>
+                <template id="phase-data-{{ phase.id }}">
+                    <header class="task-panel-header" data-status="{{ phase.status }}">
+                        <span class="marker marker-{{ phase.status }}" aria-hidden="true"></span>
+                        <h2>{{ phase.name|strip_phase_prefix }} <span class="task-panel-id">[{{ phase.id }}]</span></h2>
+                        <button type="button" class="edit-lock" aria-label="Toggle edit mode"></button>
+                    </header>
+                    <div class="task-panel-body">
+                        <section class="task-panel-section task-panel-meta">
+                            <dl>
+                                <dt>Id</dt><dd>{{ phase.id }}</dd>
+                                <dt>Ticket</dt><dd>{{ phase.ticketId }}</dd>
+                                <dt>Status</dt><dd>{{ phase.status }}</dd>
+                                <dt>Order</dt><dd>{{ phase.order }}</dd>
+                                <dt>Created</dt><dd>{{ phase.createdAt }}</dd>
+                                <dt>Updated</dt><dd>{{ phase.updatedAt }}</dd>
+                                <dt>Archived</dt><dd>{{ phase.archivedAt }}</dd>
+                                {% if phase.maxAttempts > 0 %}
+                                <dt>Max attempts</dt><dd>{{ phase.maxAttempts }}</dd>
+                                <dt>Attempts</dt><dd>{{ phase.attempts }}/{{ phase.maxAttempts }}</dd>
+                                {% endif %}
+                            </dl>
+                        </section>
+                        <div class="panel-view">
+                            <section class="task-panel-section"><h3>Name</h3><p>{{ phase.name }}</p></section>
+                            <section class="task-panel-section"><h3>Description</h3><p>{{ phase.description }}</p></section>
+                            <section class="task-panel-section is-ai"><h3>AI description</h3><p>{{ phase.aiDescription }}</p></section>
+                        </div>
+                        <div class="panel-edit">
+                            {% if phase.editError %}
+                                <div class="phase-edit-error">{{ phase.editError }}</div>
+                            {% endif %}
+                            <form class="phase-edit-form" method="post" action="/phase/{{ phase.id }}/edit">
+                                <div class="phase-edit-field">
+                                    <label for="phase-edit-name">Name</label>
+                                    <input type="text" id="phase-edit-name" name="name" value="{{ phase.editName }}">
+                                </div>
+                                <div class="phase-edit-field">
+                                    <label for="phase-edit-description">Description</label>
+                                    <textarea id="phase-edit-description" name="description">{{ phase.editDescription }}</textarea>
+                                </div>
+                                <div class="phase-edit-field">
+                                    <label for="phase-edit-ai-description">AI description</label>
+                                    <textarea id="phase-edit-ai-description" name="ai_description">{{ phase.editAiDescription }}</textarea>
+                                </div>
+                                <div class="phase-edit-actions">
+                                    <button type="submit" class="phase-edit-save">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </template>
+                <div class="phase-body">
+                    {% if phase.description %}
+                        <div class="phase-desc text-clamp">{{ phase.description }}</div>
+                    {% endif %}
+                    {% if phase.description and phase.aiDescription %}
+                        <hr class="phase-sep">
+                    {% endif %}
+                    {% if phase.aiDescription %}
+                        <div class="phase-ai-desc text-clamp">{{ phase.aiDescription }}</div>
+                    {% endif %}
+                    {% if phase.tasks is empty %}
+                        <div class="empty phase-empty">no tasks</div>
+                    {% else %}
+                        <ul class="tasks">
+                            {% for task in phase.tasks %}
+                                <li>
+                                    {% include '_task.html.twig' %}
+                                    <template id="task-data-{{ task.id }}">
+                                        <header class="task-panel-header" data-status="{{ task.status }}">
+                                            <span class="marker marker-{{ task.status }}" aria-hidden="true"></span>
+                                            <h2>{{ task.title }} <span class="task-panel-id">[{{ task.id }}]</span></h2>
+                                            <button type="button" class="edit-lock" aria-label="Toggle edit mode"></button>
+                                        </header>
+                                        <div class="task-panel-body">
+                                            <section class="task-panel-section task-panel-meta">
+                                                <dl>
+                                                    <dt>Id</dt><dd>{{ task.id }}</dd>
+                                                    <dt>Phase</dt><dd>{{ task.phaseId }}</dd>
+                                                    <dt>Status</dt><dd>{{ task.status }}</dd>
+                                                    <dt>Actor</dt><dd>{{ task.actor }}</dd>
+                                                    <dt>Model</dt><dd>{{ task.model|default('—') }}</dd>
+                                                    <dt>Order</dt><dd>{{ task.order }}</dd>
+                                                    <dt>Created</dt><dd>{{ task.createdAt }}</dd>
+                                                    <dt>Updated</dt><dd>{{ task.updatedAt }}</dd>
+                                                    <dt>Archived</dt><dd>{{ task.archivedAt }}</dd>
+                                                    {% if task.maxAttempts > 0 %}
+                                                    <dt>Attempts</dt><dd>{{ task.attempts }}/{{ task.maxAttempts }}</dd>
+                                                    {% endif %}
+                                                </dl>
+                                            </section>
+                                            <div class="panel-view">
+                                                {% if task.description %}<section class="task-panel-section"><h3>Description</h3><p>{{ task.description }}</p></section>{% endif %}
+                                                {% if task.result %}<section class="task-panel-section"><h3>Result</h3><p>{{ task.result }}</p></section>{% endif %}
+                                                {% if task.aiDescription %}<section class="task-panel-section is-ai"><h3>AI description</h3><p>{{ task.aiDescription }}</p></section>{% endif %}
+                                                {% if task.aiResult %}<section class="task-panel-section is-ai"><h3>AI result</h3><p>{{ task.aiResult }}</p></section>{% endif %}
+                                                {% if task.transitions %}
+                                                    <section class="task-panel-section"><h3>Status history</h3><ul class="task-panel-transitions">
+                                                        {% for t in task.transitions %}<li>{{ t.timestamp }}: {{ t.fromStatus|default('—') }} → {{ t.toStatus }}</li>{% endfor %}
+                                                    </ul></section>
+                                                {% endif %}
+                                                {% if task.logs %}
+                                                    <section class="task-panel-section"><h3>Logs</h3><ul class="task-panel-logs">
+                                                        {% for l in task.logs %}<li><strong>{{ l.logType }}</strong> {{ l.timestamp }} — {{ l.title }}{% if l.detail %}<p>{{ l.detail }}</p>{% endif %}</li>{% endfor %}
+                                                    </ul></section>
+                                                {% endif %}
+                                            </div>
+                                            <div class="panel-edit">
+                                                {% if task.editError %}
+                                                    <div class="task-edit-error">{{ task.editError }}</div>
+                                                {% endif %}
+                                                <form class="task-edit-form" method="post" action="/task/{{ task.id }}/edit">
+                                                    <div class="task-edit-field">
+                                                        <label for="task-edit-name">Name</label>
+                                                        <input type="text" id="task-edit-name" name="name" value="{{ task.editName }}">
+                                                    </div>
+                                                    <div class="task-edit-field">
+                                                        <label for="task-edit-description">Description</label>
+                                                        <textarea id="task-edit-description" name="description">{{ task.editDescription }}</textarea>
+                                                    </div>
+                                                    <div class="task-edit-field">
+                                                        <label for="task-edit-ai-description">AI description</label>
+                                                        <textarea id="task-edit-ai-description" name="ai_description">{{ task.editAiDescription }}</textarea>
+                                                    </div>
+                                                    <div class="task-edit-field">
+                                                        <label for="task-edit-actor">Actor</label>
+                                                        <select id="task-edit-actor" name="actor">
+                                                            <option value="agent"{% if task.editActor == 'agent' %} selected{% endif %}>agent</option>
+                                                            <option value="human"{% if task.editActor == 'human' %} selected{% endif %}>human</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="task-edit-field">
+                                                        <label for="task-edit-max-attempts">Max attempts</label>
+                                                        <input type="number" id="task-edit-max-attempts" name="max_attempts" value="{{ task.editMaxAttempts }}" min="0">
+                                                    </div>
+                                                    <div class="task-edit-actions">
+                                                        <button type="submit" class="task-edit-save">Save</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </details>
+        {% endfor %}
+    {% endif %}
+</section>
+
+<section class="logs">
+    <input type="checkbox" id="logs-toggle" class="logs-toggle">
+    <h2 class="section-label"><label for="logs-toggle">Log</label></h2>
+    {% if model.logs is empty %}
+        <p class="empty">No log entries yet.</p>
+    {% else %}
+        <ul class="log-entries">
+            {% for entry in model.logs %}
+                <li class="log-entry" data-log-id="{{ entry.id }}">
+                    {% if entry.detail is not empty %}
+                        <input type="checkbox" id="log-detail-toggle-{{ entry.id }}" class="log-detail-toggle">
+                        <label for="log-detail-toggle-{{ entry.id }}" class="log-row">
+                            <span class="log-level">{{ entry.level }}</span>
+                            <span class="log-type">{{ entry.logType }}</span>
+                            <span class="log-title">{{ entry.title }}</span>
+                            <span class="log-time">{{ entry.timestamp }}</span>
+                        </label>
+                        <div class="log-detail">{{ entry.detail }}</div>
+                    {% else %}
+                        <span class="log-level">{{ entry.level }}</span>
+                        <span class="log-type">{{ entry.logType }}</span>
+                        <span class="log-title">{{ entry.title }}</span>
+                        <span class="log-time">{{ entry.timestamp }}</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
+<dialog id="task-panel" class="task-panel" data-mode="{% if model.taskEditId %}edit{% else %}view{% endif %}"{% if model.taskEditId %} data-open-on-load data-open-task-id="{{ model.taskEditId }}"{% endif %}>
+</dialog>
+
+<dialog id="phase-panel" class="task-panel" data-mode="{% if model.phaseEditId %}edit{% else %}view{% endif %}"{% if model.phaseEditId %} data-open-on-load data-open-phase-id="{{ model.phaseEditId }}"{% endif %}>
+</dialog>
+
+<dialog id="terminal-error" class="terminal-error">
+    <button type="button" class="terminal-error-close" aria-label="Close">&times;</button>
+    <p class="terminal-error-message"></p>
+</dialog>
+{% endblock %}
