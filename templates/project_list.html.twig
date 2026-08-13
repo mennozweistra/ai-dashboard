@@ -1,0 +1,33 @@
+{% extends 'layout.html.twig' %}
+
+{% block titleline %}<h2 class="section-label">Projects</h2>{% endblock %}
+
+{% block content %}
+<section>
+    <div class="ticket-list-head">
+        <form method="get" action="/" class="toggle-form{% if model.showDone %} is-on{% endif %}">
+            <input type="checkbox" id="show-done-toggle" name="show_done" value="1"
+                   {% if model.showDone %}checked{% endif %} onchange="this.form.submit()">
+            <label for="show-done-toggle">show done</label>
+        </form>
+    </div>
+    {% if model.projects is empty %}
+        <p class="empty">{% if model.showDone %}No projects yet.{% else %}No projects (excluding done).{% endif %}</p>
+    {% else %}
+        <ul class="projects-list">
+            {% for project in model.projects %}
+                <li class="project-row" data-status="{{ project.status }}">
+                    <a href="/?project={{ project.id }}">
+                        <span class="marker marker-{{ project.status }}" aria-hidden="true"></span>
+                        <span class="project-name-wrap">
+                            <span class="project-name">{{ project.name }}</span>
+                            <span class="project-id">[{{ project.id }}]</span>
+                        </span>
+                        <span class="status-word">{{ project.status }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+{% endblock %}

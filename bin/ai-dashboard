@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Probe the two layouts this package ships in (ticket 269): a checkout, where this file
+// sits in bin/ next to a sibling vendor/, and a composer global vendor install, where
+// this package sits three levels below the consumer's vendor/ root.
+$autoload = null;
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $autoload = $candidate;
+        break;
+    }
+}
+if ($autoload === null) {
+    fwrite(STDERR, "Could not find the Composer autoloader.\n");
+    exit(1);
+}
+require $autoload;
+
+use AiToolset\AiDashboard\Kernel\DashboardConfig;
+
+// Ticket 269, requirement 684: ~/.ai-dashboard/config.toml's `address` and
+// `port` keys are the defaults for where this process binds; an explicit
+// --host/--port flag still wins over the config file.
+$configPath = DashboardConfig::defaultPath();
+
+$opts = getopt('', ['host:', 'port:']);
+$host = isset($opts['host']) && is_string($opts['host'])
+    ? $opts['host']
+    : (DashboardConfig::readAddress($configPath) ?? '127.0.0.1');
+$port = isset($opts['port']) && is_string($opts['port'])
+    ? (int) $opts['port']
+    : (DashboardConfig::readPort($configPath) ?? 8766);
+
+$router = dirname(__DIR__) . '/public/index.php';
+$address = "{$host}:{$port}";
+
+fwrite(STDERR, "ai-dashboard listening on http://{$address}" . PHP_EOL);
+
+passthru(PHP_BINARY . ' -S ' . escapeshellarg($address) . ' ' . escapeshellarg($router));

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# Fake IDE binary for IdeOpenerTest (ticket 164). It never touches a real
+# editor. It sleeps a few seconds before exiting, purely so a test can assert
+# that IdeOpener::open() returns long before this process exits — proving the
+# launch is detached rather than a blocking exec(), the way a real GUI editor
+# (which does not return until the user closes it) requires.
+
+sleep 3
+exit 0

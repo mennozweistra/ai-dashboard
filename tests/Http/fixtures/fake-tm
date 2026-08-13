@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+# Fake `bin/tm` binary for TmCliRunner tests (ticket 153). It never touches
+# ai-lib or a real database. It mirrors the JSON envelope shape bin/tm's own
+# BaseCommand produces: `{"ok":true,"data":{...}}` on stdout for success, and
+# `{"ok":false,"error":{"code":...,"message":...,"type":...}}` on stderr with
+# a non-zero exit code for failure.
+#
+# Exit behaviour is driven by the `--name` value, so tests can select success
+# or failure without any environment-variable plumbing: a `--name` of exactly
+# "fail-me" makes the stub report a failure, exactly like a real bin/tm
+# invocation would on a domain-rule violation. Any other `--name` succeeds.
+#
+# Ticket 159's status routes (task:set/phase:set called with `--status`
+# rather than `--name`) reuse the same convention: a `--status` of exactly
+# "fail-me" makes the stub report a failure too, so status-controller tests
+# can select the failure path the same way the edit-route tests do.
+
+subcommand="${1:-}"
+shift || true
+
+# `template:list` (ticket 160 task 1431) takes no options and is handled
+# separately from the --name-driven success/failure switch below: the
+# project-page ticket list calls it on every render, so it always succeeds
+# here with a fixed, already-sorted template list. A later task (the
+# create-route tests, same branch) adds a `ticket:add` branch alongside this
+# one without needing to restructure the script.
+if [[ "$subcommand" == "template:list" ]]; then
+    echo '{"ok":true,"data":{"templates":["bugfix","feature"]}}'
+    exit 0
+fi
+
+name=""
+status=""
+template=""
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "--name" ]]; then
+        name="${2:-}"
+    fi
+    if [[ "$1" == "--status" ]]; then
+        status="${2:-}"
+    fi
+    if [[ "$1" == "--template" ]]; then
+        template="${2:-}"
+    fi
+    shift
+done
+
+if [[ "$name" == "fail-me" ]]; then
+    echo '{"ok":false,"error":{"code":"invalid_argument","message":"simulated failure for name","type":"InvalidArgumentException"}}' >&2
+    exit 1
+fi
+
+if [[ "$status" == "fail-me" ]]; then
+    echo '{"ok":false,"error":{"code":"invalid_argument","message":"simulated failure for status","type":"InvalidArgumentException"}}' >&2
+    exit 1
+fi
+
+# `ticket:add` (ticket 160 task 1432) has its own branch, distinct from the
+# generic --name-echoing success below: TicketCreateController needs a
+# numeric `id` in the exact snake_case shape ai-lib's Serializer produces,
+# which the generic branch does not supply. `session_id` is included too,
+# mirroring the real response shape, even though the dashboard no longer
+# reads it (ticket 269 removed the terminal-session integration that used
+# to). The fail-me check above already covers ticket:add's failure path too,
+# since it runs before this branch and is subcommand-agnostic.
+if [[ "$subcommand" == "ticket:add" ]]; then
+    echo "{\"ok\":true,\"data\":{\"id\":501,\"session_id\":\"11111111-2222-3333-4444-555555555555\",\"name\":\"${name}\",\"template\":\"${template}\"}}"
+    exit 0
+fi
+
+echo "{\"ok\":true,\"data\":{\"id\":153,\"name\":\"${name}\",\"subcommand\":\"${subcommand}\"}}"
+
+exit 0

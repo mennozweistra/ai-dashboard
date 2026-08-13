@@ -1,0 +1,11 @@
+{% extends 'layout.html.twig' %}
+
+{% block breadcrumb %}
+    <a href="/" class="home">tm</a>
+    › <a href="/?project={{ projectId }}">{{ projectName }}</a>
+    › <span class="current">{{ ticketId }}</span>
+{% endblock %}
+
+{% block content %}
+    <div class="error">{{ errorMessage }}</div>
+{% endblock %}

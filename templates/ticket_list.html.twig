@@ -1,0 +1,86 @@
+{% extends 'layout.html.twig' %}
+
+{% block breadcrumb %}<a href="/" class="home">tm</a> <span class="sep">›</span> <span>{{ model.projectName }}</span>{% endblock %}
+
+{% block titleline %}
+    <div class="ticket-list-title">
+        <h2 title="{{ model.projectName }}">{{ model.projectName }}</h2>
+        <button type="button" class="create-ticket-btn" aria-label="Create ticket">+</button>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="ticket-list-head">
+        <form method="get" action="/" class="toggle-form{% if model.showDone %} is-on{% endif %}">
+            <input type="hidden" name="project" value="{{ model.projectId }}">
+            <input type="checkbox" id="show-done-toggle" name="show_done" value="1"
+                   {% if model.showDone %}checked{% endif %} onchange="this.form.submit()">
+            <label for="show-done-toggle">show done</label>
+        </form>
+    </div>
+    {% if model.tickets is empty %}
+        <p class="empty">No tickets{% if not model.showDone %} (excluding done){% endif %} in this project.</p>
+    {% else %}
+        <ul class="ticket-list">
+            {% for ticket in model.tickets %}
+                <li class="ticket-row" data-status="{{ ticket.status }}">
+                    <a href="{{ ticket.href }}">
+                        <span class="marker marker-{{ ticket.status }}" aria-hidden="true"></span>
+                        <span class="ticket-name-wrap">
+                            <span class="ticket-objective">{{ ticket.name }}</span>
+                            <span class="ticket-id">[{{ ticket.id }}]</span>
+                        </span>
+                        <span class="ticket-date">{{ ticket.createdAt }}</span>
+                        <span class="ticket-type" data-type="{{ ticket.type }}">{{ ticket.type }}</span>
+                        {% if ticket.priority == 3 %}
+                            <span class="ticket-priority priority-chip priority-chip-high" data-priority="high">High</span>
+                        {% elseif ticket.priority == 2 %}
+                            <span class="ticket-priority priority-chip priority-chip-medium" data-priority="medium">Medium</span>
+                        {% elseif ticket.priority == 1 %}
+                            <span class="ticket-priority priority-chip priority-chip-low" data-priority="low">Low</span>
+                        {% else %}
+                            <span class="ticket-priority priority-chip is-empty"></span>
+                        {% endif %}
+                        <span class="status-word">{{ ticket.status }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
+<dialog id="create-ticket-panel" class="task-panel"{% if model.createTicketOpen %} data-open-on-load{% endif %}>
+    <header class="task-panel-header">
+        <h2>New ticket</h2>
+    </header>
+    <div class="task-panel-body">
+        {% if model.createTicketError %}
+            <div class="create-ticket-error">{{ model.createTicketError }}</div>
+        {% endif %}
+        <form class="create-ticket-form" method="post" action="/project/{{ model.projectId }}/ticket/create">
+            <div class="create-ticket-field">
+                <label for="create-ticket-title">Title</label>
+                <input type="text" id="create-ticket-title" name="title" value="{{ model.createTicketTitle }}">
+            </div>
+            <div class="create-ticket-field">
+                <label for="create-ticket-description">Description</label>
+                <textarea id="create-ticket-description" name="description">{{ model.createTicketDescription }}</textarea>
+            </div>
+            <div class="create-ticket-field">
+                <label for="create-ticket-template">Template</label>
+                {% set selectedTemplate = model.createTicketTemplate ?: 'feature' %}
+                <select id="create-ticket-template" name="template">
+                    <option value="">(none)</option>
+                    {% for template in model.templates %}
+                        <option value="{{ template }}"{% if template == selectedTemplate %} selected{% endif %}>{{ template }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="create-ticket-actions">
+                <button type="submit" class="create-ticket-save" disabled>Create</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endblock %}

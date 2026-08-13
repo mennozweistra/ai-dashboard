@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#
+# Fake `bin/tm` binary for TmCliRunner's TM_DB passthrough test (ticket 161
+# task 1565). Unlike fake-tm, this stub ignores its subcommand and options
+# entirely: it exists only to prove that a value TmCliRunner's caller sets in
+# TM_DB before calling run() is visible inside the child process proc_open()
+# spawns. It echoes getenv('TM_DB') back as the `tm_db` field of a standard
+# bin/tm success envelope, so the test can assert on it through
+# TmCliResult::data() the same way the other tests assert on `name` or `id`.
+
+echo "{\"ok\":true,\"data\":{\"tm_db\":\"${TM_DB:-}\"}}"
+
+exit 0

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+# Fake `bin/tm` binary for TmCliRunnerTest's regression coverage of ticket
+# 153 task 1274. It simulates bin/tm violating its own contract: a PHP
+# deprecation notice (or any other diagnostic text) landing on a stream
+# ahead of bin/tm's own JSON payload. Real bin/tm's entrypoint now discards
+# that diagnostic text before it can ever reach stdout/stderr (task 1274),
+# so this should never happen for real — but if bin/tm ever does violate its
+# own contract, TmCliResult must treat the noisy stream as unparseable and
+# report the generic error rather than tolerating the noise and returning a
+# possibly-mismatched result, on both the success and failure path.
+#
+# Exit behaviour is driven by the `--name` value, same convention as
+# fake-tm: a `--name` of exactly "fail-me" makes the stub report a failure.
+
+subcommand="${1:-}"
+shift || true
+
+name=""
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "--name" ]]; then
+        name="${2:-}"
+    fi
+    shift
+done
+
+# Simulated deprecation notice, printed directly ahead of bin/tm's own JSON
+# payload on whichever stream TmCliResult actually reads for that exit code
+# (stderr for a non-zero exit, stdout for a zero exit) — this is the shape a
+# real diagnostic leak from PHP or a vendor dependency would have taken
+# before bin/tm's entrypoint started discarding it (task 1274).
+
+if [[ "$name" == "fail-me" ]]; then
+    echo 'PHP Deprecation:  Yosymfony\Toml\Parser::syntaxError(): Implicitly marking parameter $token as nullable is deprecated in /path/to/vendor/yosymfony/toml/src/Toml/Parser.php on line 42' >&2
+    echo '{"ok":false,"error":{"code":"invalid_argument","message":"simulated failure for name","type":"InvalidArgumentException"}}' >&2
+    exit 1
+fi
+
+echo 'PHP Deprecation:  Yosymfony\Toml\Parser::syntaxError(): Implicitly marking parameter $token as nullable is deprecated in /path/to/vendor/yosymfony/toml/src/Toml/Parser.php on line 42'
+echo "{\"ok\":true,\"data\":{\"id\":153,\"name\":\"${name}\",\"subcommand\":\"${subcommand}\"}}"
+
+exit 0
