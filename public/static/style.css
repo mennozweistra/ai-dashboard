@@ -22,6 +22,9 @@
   --ok:           oklch(0.72 0.10 148);
   --review:       oklch(0.84 0.13 95);
   --failed:       oklch(0.64 0.15 28);
+  /* The only cool hue on the board, so a skipped row separates from the
+   * warm greys of pending at a glance without competing with the amber. */
+  --skipped:      oklch(0.60 0.06 265);
 
   --mono: ui-monospace, "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
@@ -219,7 +222,7 @@ main {
 .marker-review::before  { content: '⚠'; color: var(--review);    font-size: 11px; }
 .marker-failed::before  { content: '✗'; color: var(--failed);    font-size: 11px; }
 .marker-blocked::before { content: '✗'; color: var(--failed);    font-size: 11px; }
-.marker-skipped::before { content: '–'; color: var(--text-faint); font-size: 11px; }
+.marker-skipped::before { content: '⊘'; color: var(--skipped);    font-size: 12px; }
 
 /* ---------- Projects landing ---------- */
 
@@ -267,6 +270,7 @@ main {
 .project-row[data-status="failed"]  .status-word { color: var(--failed); }
 .project-row[data-status="active"]  .status-word { color: var(--accent); }
 .project-row[data-status="blocked"] .status-word { color: var(--failed); }
+.project-row[data-status="skipped"] .status-word { color: var(--skipped); }
 
 /* ---------- Ticket list ---------- */
 
@@ -418,6 +422,7 @@ main {
   color: var(--accent);
 }
 .ticket-row[data-status="blocked"] .status-word { color: var(--failed); }
+.ticket-row[data-status="skipped"] .status-word { color: var(--skipped); }
 
 /* ---------- Priority chip ----------
  *
@@ -872,6 +877,7 @@ main {
 .phase[data-status="done"]    .phase-status { color: var(--ok); }
 .phase[data-status="review"]  .phase-status { color: var(--review); }
 .phase[data-status="failed"]  .phase-status { color: var(--failed); }
+.phase[data-status="skipped"] .phase-status { color: var(--skipped); }
 
 /* Click-to-cycle status affordance (ticket 159). The underline sits at
  * transparent opacity at rest and fades in on hover via a
@@ -963,6 +969,7 @@ main {
 .task[data-status="done"]    .task-status { color: var(--ok); }
 .task[data-status="review"]  .task-status { color: var(--review); }
 .task[data-status="failed"]  .task-status { color: var(--failed); }
+.task[data-status="skipped"] .task-status { color: var(--skipped); }
 
 /* Selected task row: stays gold while its side-panel is open so the
  * user can see which row the panel belongs to. The JS adds .is-open
