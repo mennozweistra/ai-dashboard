@@ -37,7 +37,13 @@ All tokens live in `:root` in `public/static/style.css` as CSS custom properties
 --ok:           oklch(0.72 0.10 148);  /* green for ✓ */
 --review:       oklch(0.84 0.13 95);   /* amber-yellow for ⚠ */
 --failed:       oklch(0.64 0.15 28);   /* red for ✗ and blocked */
+--skipped:      oklch(0.60 0.06 265);  /* muted cool blue for ⊘ */
 ```
+
+`--skipped` is the only cool hue on the board. A skipped row used to carry the
+same `--text-faint` grey as a pending row, so a finished ticket still read as
+having open work; the cool hue separates the two at a glance, and its low
+chroma keeps `--accent` the only loud colour.
 
 ### 2.2 Type
 
@@ -71,7 +77,7 @@ Every row that displays an entity status (ticket row, phase summary, task summar
 | `review` | warning triangle (`⚠`) | 11px | `--review` |
 | `failed` | cross (`✗`) | 11px | `--failed` |
 | `blocked` | cross (`✗`) | 11px | `--failed` |
-| `skipped` | en dash (`–`) | 11px | `--text-faint` |
+| `skipped` | slashed circle (`⊘`) | 12px | `--skipped` |
 
 Rule of thumb: glyphs with a distinct footprint differ at a glance even in greyscale; `failed` and `blocked` deliberately share the same glyph and colour — the status word is what tells them apart. Do not redefine these.
 
@@ -87,7 +93,7 @@ Status colours appear in three places: the marker (above), the right-aligned sta
 | `review` | `--review` | `--review` | Status word goes amber; nothing else flashes. |
 | `failed` | `--failed` | `--failed` | Status word goes red; nothing else flashes. |
 | `blocked` | `--failed` | `--failed` | Status word goes red; nothing else flashes. |
-| `skipped` | `--text-faint` | `--text-faint` | None. Same tone as `pending`; distinguished by glyph only. |
+| `skipped` | `--skipped` | `--skipped` | None. Marker and status word both go cool blue, the one hue no other status uses. |
 | Opened task (independent of status) | unchanged | unchanged | Title and result-summary text turn `--accent`. This is a per-row "current focus" signal, distinct from the `active` state. |
 
 The status word always renders in tracked uppercase at 13px with 0.10em letter-spacing, regardless of status. Status colour acts on the existing word, not on a chip or pill background.
