@@ -477,7 +477,7 @@ final class TicketDeepTest extends BaseHttpTest
     }
 
     #[Test]
-    public function it_shows_the_status_comment_on_the_page_above_the_objective(): void
+    public function it_shows_the_status_comment_in_the_header_band_below_the_title(): void
     {
         $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
         $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket', description: 'the objective'));
@@ -486,7 +486,7 @@ final class TicketDeepTest extends BaseHttpTest
         $html = (string) $this->app->handle(Request::create("/?project={$project->id}&ticket={$ticket->id}"), catch: false)->getContent();
 
         self::assertStringContainsString('<p class="status-comment-line">waiting for customer reply</p>', $html);
-        self::assertLessThan(strpos($html, 'the objective'), strpos($html, 'status-comment-line'));
+        self::assertLessThan(strpos($html, "<main>"), strpos($html, "status-comment-line"));
     }
 
     #[Test]

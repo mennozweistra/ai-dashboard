@@ -101,8 +101,18 @@ h1, h2, h3, h4 { font-weight: 500; margin: 0; }
   margin: 0 auto;
   padding: 2px var(--pad-x) 14px;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 16px;
+  gap: 4px 16px;
+}
+/* The ticket's status comment, set by hand. It takes a full row below the
+ * title row, in italic and the accent colour. */
+.site-header-title .status-comment-line {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 17px;
+  font-style: italic;
+  color: var(--accent);
 }
 .site-header-title > * {
   flex: 1 1 auto;
@@ -537,14 +547,6 @@ main {
 .ticket-row .ticket-priority {
   grid-column: 6;
   justify-self: center;
-}
-/* The ticket's status comment, set by hand. Italic in the accent colour, so
- * it does not read as part of the objective below it. */
-.ticket-head .status-comment-line {
-  margin: 0 0 6px;
-  font-size: 17px;
-  font-style: italic;
-  color: var(--accent);
 }
 .ticket-head .objective {
   margin: 0;
