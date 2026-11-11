@@ -27,6 +27,8 @@ final readonly class TicketListViewModel
      *     value; same rule as `$createTicketTitle`.
      * @param string $createTicketTemplate Just-submitted selected template
      *     name; same rule as `$createTicketTitle`.
+     * @param bool $inFlight Requirement 74: whether the in-flight filter is
+     *     on, so the template can tick its toggle checkbox.
      */
     public function __construct(
         public int $projectId,
@@ -39,5 +41,6 @@ final readonly class TicketListViewModel
         public string $createTicketTitle = '',
         public string $createTicketDescription = '',
         public string $createTicketTemplate = '',
+        public bool $inFlight = false,
     ) {}
 }

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace AiToolset\AiDashboard\View;
 
 /**
- * `editOpen`/`editError`/`editName`/`editDescription`/`editAiDescription`
- * carry the ticket-panel edit-form state for a single render (ticket 153
- * task 1268). On a normal page load `editOpen` is `false` and the three
- * `edit*` fields mirror the header's stored values, so opening the panel's
- * edit mode by hand always starts from the current data. After a failed
+ * `editOpen`/`editError`/`editName`/`editDescription`/`editAiDescription`/
+ * `editStatusComment` carry the ticket-panel edit-form state for a single
+ * render (ticket 153 task 1268; `editStatusComment` added ticket 56 task
+ * 1057). On a normal page load `editOpen` is `false` and the four `edit*`
+ * fields mirror the header's stored values, so opening the panel's edit
+ * mode by hand always starts from the current data. After a failed
  * `POST /ticket/{id}/edit`, `TicketEditController` re-renders through
  * `TicketDeepController::render()` with `editOpen: true`, `editError` set to
  * the parsed `bin/tm` error message, and the `edit*` fields set to the
@@ -62,6 +63,7 @@ final readonly class TicketDeepViewModel
         public string $editName,
         public string $editDescription,
         public string $editAiDescription,
+        public string $editStatusComment,
         public ?int $phaseEditId = null,
         public ?int $taskEditId = null,
         public bool $ideConfigured = false,

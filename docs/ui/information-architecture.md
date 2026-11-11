@@ -41,7 +41,7 @@ As of ticket 164, every page's header is a sticky two-row band, pinned to the vi
 
 ### 1.2 Ticket list
 
-**URL.** `/?project=<id>` (optionally with `&show_done=1`)
+**URL.** `/?project=<id>` (optionally with `&show_done=1`, `&in_flight=1`)
 
 **Header breadcrumb.** `tm › <project-name>` — `tm` links back to the project list. The breadcrumb shows the project's name (read from the `ProjectOut` returned by `ai-lib`); only the URL parameter carries the id.
 
@@ -49,16 +49,18 @@ As of ticket 164, every page's header is a sticky two-row band, pinned to the vi
 
 **Body.**
 
-- A row holding only the `show done` / `hide done` toggle, right-aligned.
-- The toggle is a single checkbox inside a small form that submits `GET` on change. When done is hidden, the label reads `show done`. When done is shown, the label reads `hide done`.
+- A row holding the `show done` / `hide done` toggle and the `in flight` toggle, right-aligned.
+- The show/hide-done toggle is a checkbox inside a small form that submits `GET` on change. When done is hidden, the label reads `show done`. When done is shown, the label reads `hide done`. The `in flight` toggle (requirement 74) is a second, independent checkbox in that same form, labelled `in flight` in the same lower-case style; checking it narrows the list to the tickets actually being worked on (`../api/http.md` §2.1's `in_flight` parameter) regardless of the show/hide-done checkbox's own state.
 - A list of ticket rows. Each row is a single link comprising:
   - 16px gutter cell with a status marker shape (see `design-system.md` §3 for the shape catalogue).
-  - Ticket id in monospace.
+  - Truncated objective, single line, ellipsis on overflow, with the ticket id in monospace beside it.
+  - The ticket's status comment (requirement 73), truncated to one line with an ellipsis on overflow; an empty cell, not a placeholder, when the ticket has no comment.
   - Created-at date in `YYYY-MM-DD` format, dim.
-  - Truncated objective, single line, ellipsis on overflow.
+  - Type chip.
+  - Priority chip.
   - Status word right-aligned in tracked uppercase, dim.
 - Order: most recently created first.
-- Empty state: `No tickets in this project.` if `show_done` is on, or `No tickets (excluding done) in this project.` if it is off. Italic muted grey.
+- Empty state: `No tickets in this project.` if `show_done` is on, `No tickets (excluding done) in this project.` if it is off, or, when the `in flight` toggle is on and nothing matches, `No tickets being worked on in this project.` regardless of `show_done`.
 
 **Create ticket (ticket 160, requirements 154/155/156/157/158/159).** The "+" button next to the project name (`.create-ticket-btn`) is always visible, regardless of whether the project has any tickets. It opens `<dialog id="create-ticket-panel">`, a popup reusing the shared `.task-panel` chrome (see `design-system.md`'s class catalogue), with three fields — title, description, and a template `<select>` populated from `tm template list` — and a Create button that stays disabled until title or description has content. Submitting the popup does a normal (non-AJAX) form `POST` to `/project/{id}/ticket/create` (`../api/http.md` §2.9), which creates the ticket via `bin/tm`. On success the response redirects to the new ticket's deep view. On a `bin/tm` failure (for example an unknown template), the project page re-renders with the popup already open, the parsed error message shown inside it, and the submitted field values preserved. Ticket 269 removed the follow-on `ai-tmux` terminal session this route used to start for the new ticket, along with the `terminal_error`/`terminal_warning` redirect parameters that reported its outcome — see `../api/http.md` §2.9.
 

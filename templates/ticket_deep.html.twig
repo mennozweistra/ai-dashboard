@@ -20,6 +20,9 @@
             {% endif %}
         </div>
     </div>
+    {% if model.header.statusComment %}
+    <p class="status-comment-line">{{ model.header.statusComment }}</p>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -47,6 +50,7 @@
                 <dt>Archived</dt><dd>{{ model.header.archivedAt }}</dd>
                 <dt>Session</dt><dd>{{ model.header.sessionId }}</dd>
                 <dt>Priority</dt><dd>{{ model.header.priority }}</dd>
+                <dt>Status comment</dt><dd>{{ model.header.statusComment }}</dd>
             </dl>
         </section>
         <div class="panel-view">
@@ -70,6 +74,10 @@
                 <div class="ticket-edit-field">
                     <label for="ticket-edit-ai-description">AI description</label>
                     <textarea id="ticket-edit-ai-description" name="ai_description">{{ model.editAiDescription }}</textarea>
+                </div>
+                <div class="ticket-edit-field">
+                    <label for="ticket-edit-status-comment">Status comment</label>
+                    <input type="text" id="ticket-edit-status-comment" name="status_comment" value="{{ model.editStatusComment }}">
                 </div>
                 <div class="ticket-edit-actions">
                     <button type="submit" class="ticket-edit-save">Save</button>

@@ -31,6 +31,17 @@ final class TicketEditControllerTest extends BaseHttpTest
 {
     private const string STUB = __DIR__ . '/fixtures/fake-tm';
 
+    /**
+     * Ticket 56 task 1056: fake-tm's generic success branch only echoes
+     * back `name` and `subcommand`, and a successful save is a bodyless
+     * 302 redirect anyway, so nothing in an HTTP response can show which
+     * options were actually forwarded to `bin/tm`. This stub always fails
+     * and echoes the exact argv it received into the error message, which
+     * TicketEditController renders verbatim into the edit panel on
+     * failure — that is what lets the forwarding tests below assert on it.
+     */
+    private const string ARGV_ECHO_STUB = __DIR__ . '/fixtures/fake-tm-argv-echo';
+
     private ProjectService $projectService;
     private TicketService $ticketService;
 
@@ -109,6 +120,108 @@ final class TicketEditControllerTest extends BaseHttpTest
         // The panel opens already in edit mode.
         self::assertStringContainsString('data-mode="edit"', $body);
         self::assertStringContainsString('data-open-on-load', $body);
+    }
+
+    #[Test]
+    public function it_forwards_a_submitted_status_comment_as_the_status_comment_option(): void
+    {
+        // Requirement 75: status_comment maps to --status-comment, mirroring
+        // name/description/ai_description in §2.5 of docs/api/http.md.
+        $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
+        $this->app = new Application($this->pdo, self::ARGV_ECHO_STUB);
+
+        $response = $this->app->handle(Request::create(
+            "/ticket/{$ticket->id}/edit",
+            'POST',
+            ['status_comment' => 'waiting on the migration review'],
+        ));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString(
+            '--status-comment|waiting on the migration review',
+            (string) $response->getContent(),
+        );
+    }
+
+    #[Test]
+    public function it_forwards_an_empty_status_comment_so_the_stored_comment_is_cleared(): void
+    {
+        // The column is `text NOT NULL DEFAULT ''`, so an empty submitted
+        // value is a real value (clear the comment), not a missing one —
+        // unlike a field genuinely absent from the body (next test).
+        $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
+        $this->app = new Application($this->pdo, self::ARGV_ECHO_STUB);
+
+        $response = $this->app->handle(Request::create(
+            "/ticket/{$ticket->id}/edit",
+            'POST',
+            ['status_comment' => ''],
+        ));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('--status-comment|', (string) $response->getContent());
+    }
+
+    #[Test]
+    public function it_does_not_forward_status_comment_at_all_when_it_is_absent_from_the_body(): void
+    {
+        // The existing "missing option means leave unchanged" rule
+        // (src/Http/TicketEditController.php around lines 42-59) must keep
+        // holding for the new field: omitting it from the POST body must
+        // not forward --status-comment at all, so bin/tm leaves the stored
+        // comment alone.
+        $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
+        $this->app = new Application($this->pdo, self::ARGV_ECHO_STUB);
+
+        $response = $this->app->handle(Request::create(
+            "/ticket/{$ticket->id}/edit",
+            'POST',
+            ['name' => 'New name'],
+        ));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringNotContainsString('--status-comment', (string) $response->getContent());
+    }
+
+    #[Test]
+    public function it_keeps_the_typed_status_comment_in_the_reopened_form_on_a_failed_save(): void
+    {
+        // Requirement 75: on a failed save the reopened form keeps the
+        // submitted comment, not the stored one, mirroring the existing
+        // preserve-on-error behaviour for name/description/ai_description
+        // (it_rerenders_the_ticket_deep_page_with_the_parsed_error_message_on_failure
+        // above). The regular fake-tm stub reports failure exactly when
+        // --name is "fail-me".
+        //
+        // The claim is about the form input only, not the whole page. The
+        // always-visible meta block above the form keeps showing the stored
+        // value, the same as every other field it lists — a rejected save
+        // changes nothing that is stored, so the meta block must not report
+        // as if it had.
+        $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'stored comment');
+
+        $response = $this->app->handle(Request::create(
+            "/ticket/{$ticket->id}/edit",
+            'POST',
+            ['name' => 'fail-me', 'status_comment' => 'typed but not saved'],
+        ));
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        self::assertStringContainsString(
+            '<input type="text" id="ticket-edit-status-comment" name="status_comment" value="typed but not saved">',
+            $body,
+        );
+        self::assertStringNotContainsString(
+            '<input type="text" id="ticket-edit-status-comment" name="status_comment" value="stored comment">',
+            $body,
+        );
+        self::assertStringContainsString('<dt>Status comment</dt><dd>stored comment</dd>', $body);
     }
 
     #[Test]

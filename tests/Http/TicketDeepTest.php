@@ -455,6 +455,74 @@ final class TicketDeepTest extends BaseHttpTest
     }
 
     #[Test]
+    public function it_shows_the_status_comment_in_the_panel_meta_block_next_to_priority(): void
+    {
+        // Requirement 75: the ticket page shows the status comment, in the
+        // panel's meta block next to Priority.
+        $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $request = Request::create("/?project={$project->id}&ticket={$ticket->id}");
+        $response = $this->app->handle($request, catch: false);
+        $html = (string) $response->getContent();
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('<dt>Status comment</dt><dd>waiting on the migration review</dd>', $html);
+        self::assertLessThan(
+            strpos($html, 'Status comment'),
+            strpos($html, 'Priority'),
+            'Status comment must appear next to Priority in the meta block, after it.',
+        );
+    }
+
+    #[Test]
+    public function it_shows_the_status_comment_in_the_header_band_below_the_title(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket', description: 'the objective'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting for customer reply');
+
+        $html = (string) $this->app->handle(Request::create("/?project={$project->id}&ticket={$ticket->id}"), catch: false)->getContent();
+
+        self::assertStringContainsString('<p class="status-comment-line">waiting for customer reply</p>', $html);
+        self::assertLessThan(strpos($html, "<main>"), strpos($html, "status-comment-line"));
+    }
+
+    #[Test]
+    public function it_renders_no_status_comment_line_when_the_ticket_has_no_comment(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket'));
+
+        $html = (string) $this->app->handle(Request::create("/?project={$project->id}&ticket={$ticket->id}"), catch: false)->getContent();
+
+        self::assertStringNotContainsString('class="status-comment-line"', $html);
+        self::assertStringNotContainsString('class="ticket-head"', $html);
+    }
+
+    #[Test]
+    public function it_prefills_the_edit_form_status_comment_input_with_the_current_value(): void
+    {
+        // Requirement 75: the edit form holds the status comment as the
+        // current value of its input, the same way it already does for
+        // name/description/ai_description.
+        $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $request = Request::create("/?project={$project->id}&ticket={$ticket->id}");
+        $response = $this->app->handle($request, catch: false);
+        $html = (string) $response->getContent();
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString(
+            '<input type="text" id="ticket-edit-status-comment" name="status_comment" value="waiting on the migration review">',
+            $html,
+        );
+    }
+
+    #[Test]
     public function it_renders_requirements_section_above_phases_with_verification_words(): void
     {
         $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));

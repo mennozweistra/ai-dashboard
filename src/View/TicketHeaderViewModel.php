@@ -29,5 +29,6 @@ final readonly class TicketHeaderViewModel
         public string $archivedAt,
         public string $sessionId,
         public ?int $priority,
+        public string $statusComment,
     ) {}
 }

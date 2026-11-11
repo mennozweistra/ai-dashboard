@@ -223,6 +223,37 @@ final class TicketDeepViewBuilderTest extends BaseViewTest
     }
 
     #[Test]
+    public function it_propagates_status_comment_to_ticket_header_view_model(): void
+    {
+        // Requirement 75: the ticket page shows the status comment set via
+        // `bin/tm ticket:set --status-comment`, so TicketHeaderViewModel
+        // must carry it the same way TicketRowViewModel already does for
+        // the ticket-list column (ticket 56 task 1048).
+        $project = $this->projectService->add(new ProjectIn(name: 'p', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 't'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $projectOut = $this->projectService->show($project->id);
+        $deep = $this->ticketService->showDeep($ticket->id);
+        $model = $this->builder->build($projectOut, $deep);
+
+        self::assertSame('waiting on the migration review', $model->header->statusComment);
+    }
+
+    #[Test]
+    public function it_carries_an_empty_status_comment_on_ticket_header_view_model_when_none_was_set(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'p', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 't'));
+
+        $projectOut = $this->projectService->show($project->id);
+        $deep = $this->ticketService->showDeep($ticket->id);
+        $model = $this->builder->build($projectOut, $deep);
+
+        self::assertSame('', $model->header->statusComment);
+    }
+
+    #[Test]
     public function it_exposes_phase_description_and_ai_description_on_the_phase_view_model(): void
     {
         $project = $this->projectService->add(new ProjectIn(name: 'p', path: '/p'));

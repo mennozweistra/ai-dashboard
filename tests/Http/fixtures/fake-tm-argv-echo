@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# Fake `bin/tm` binary for TicketEditControllerTest's status-comment
+# forwarding tests (ticket 56 task 1056). A controller test only ever sees a
+# rendered HTML page on failure — the success path is a bodyless redirect —
+# so this stub always reports failure, and its error message is the exact
+# argv TmCliRunner invoked it with, pipe-joined
+# ("subcommand|--opt1|value1|--opt2|value2|..."). TicketEditController
+# renders that message verbatim into the edit panel on failure, which is
+# what lets a test prove exactly which options were forwarded to a given
+# bin/tm subcommand — including proving one was NOT forwarded when the
+# caller left it out of the POST body, since an option that was never
+# passed simply never appears in the joined string.
+
+subcommand="${1:-}"
+shift || true
+
+argv="$subcommand"
+for arg in "$@"; do
+    argv="${argv}|${arg}"
+done
+
+echo "{\"ok\":false,\"error\":{\"code\":\"test_echo\",\"message\":\"argv:${argv}\",\"type\":\"TestEcho\"}}" >&2
+exit 1

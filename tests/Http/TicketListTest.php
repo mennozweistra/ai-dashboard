@@ -132,6 +132,67 @@ final class TicketListTest extends BaseHttpTest
     }
 
     #[Test]
+    public function it_renders_status_comment_in_list_row(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'proj', path: '/proj'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'commented-ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $request = Request::create('/?project=' . $project->id);
+        $response = $this->app->handle($request, catch: false);
+        $content = (string) $response->getContent();
+
+        self::assertMatchesRegularExpression(
+            '/<span class="ticket-status-comment"[^>]*>waiting on the migration review<\/span>/',
+            $content,
+        );
+    }
+
+    #[Test]
+    public function it_filters_to_in_flight_tickets_when_in_flight_query_param_is_present(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'proj', path: '/proj'));
+        $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'pending-ticket'));
+        $active = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'active-ticket'));
+        $done = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'done-ticket'));
+        $this->ticketService->set(id: $active->id, status: 'active');
+        $this->ticketService->set(id: $done->id, status: 'done');
+
+        $request = Request::create('/?project=' . $project->id . '&in_flight=1');
+        $response = $this->app->handle($request, catch: false);
+        $content = (string) $response->getContent();
+
+        self::assertStringContainsString('active-ticket', $content);
+        self::assertStringNotContainsString('pending-ticket', $content);
+        self::assertStringNotContainsString('done-ticket', $content);
+    }
+
+    #[Test]
+    public function it_shows_in_flight_toggle_unchecked_when_filter_is_off(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'proj', path: '/proj'));
+
+        $request = Request::create('/?project=' . $project->id);
+        $response = $this->app->handle($request, catch: false);
+        $content = (string) $response->getContent();
+
+        self::assertMatchesRegularExpression('/<input[^>]*name="in_flight"[^>]*>/', $content);
+        self::assertDoesNotMatchRegularExpression('/<input[^>]*name="in_flight"[^>]*checked[^>]*>/', $content);
+    }
+
+    #[Test]
+    public function it_shows_in_flight_toggle_checked_when_filter_is_on(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'proj', path: '/proj'));
+
+        $request = Request::create('/?project=' . $project->id . '&in_flight=1');
+        $response = $this->app->handle($request, catch: false);
+        $content = (string) $response->getContent();
+
+        self::assertMatchesRegularExpression('/<input[^>]*name="in_flight"[^>]*checked[^>]*>/', $content);
+    }
+
+    #[Test]
     public function it_renders_the_ticket_list_when_bin_tm_is_unreachable(): void
     {
         // Ticket 160 task 1431: TicketListController now reads the template

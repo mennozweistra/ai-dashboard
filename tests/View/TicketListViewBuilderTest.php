@@ -123,6 +123,47 @@ final class TicketListViewBuilderTest extends BaseViewTest
     }
 
     #[Test]
+    public function it_keeps_only_in_flight_statuses_ordered_by_priority_when_filter_is_on(): void
+    {
+        // Requirement 74: kept statuses are active, blocked, failed, review,
+        // skipped; dropped are pending and done. Seeded without phases —
+        // TicketService::set(status:) writes the status directly, and with
+        // no phases present there is no auto_status rollup to overwrite it.
+        $pending = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'pending-ticket', priority: 1));
+        $active = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'active-ticket', priority: 2));
+        $blocked = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'blocked-ticket', priority: 3));
+        $failed = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'failed-ticket', priority: 1));
+        $review = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'review-ticket', priority: 2));
+        $skipped = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'skipped-ticket', priority: 3));
+        $done = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'done-ticket', priority: 1));
+
+        $this->ticketService->set(id: $active->id, status: 'active');
+        $this->ticketService->set(id: $blocked->id, status: 'blocked');
+        $this->ticketService->set(id: $failed->id, status: 'failed');
+        $this->ticketService->set(id: $review->id, status: 'review');
+        $this->ticketService->set(id: $skipped->id, status: 'skipped');
+        $this->ticketService->set(id: $done->id, status: 'done');
+        // $pending stays at its default 'pending' status.
+
+        $project = $this->projectService->show($this->projectId);
+        $refs = $this->ticketService->list($this->projectId);
+
+        // showDone: true isolates the assertion below from the pre-existing
+        // show-done filter: the in-flight filter must drop 'done' on its
+        // own, independent of the show-done toggle's own value.
+        $filtered = $this->builder->build($project, $refs, showDone: true, inFlight: true);
+
+        $filteredIds = array_map(fn($row) => $row->id, $filtered->tickets);
+        self::assertSame(
+            [$skipped->id, $blocked->id, $review->id, $active->id, $failed->id],
+            $filteredIds,
+        );
+
+        $unfiltered = $this->builder->build($project, $refs, showDone: true, inFlight: false);
+        self::assertCount(7, $unfiltered->tickets);
+    }
+
+    #[Test]
     public function it_propagates_type_to_ticket_row_view_model(): void
     {
         $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'a-ticket', type: 'workflow'));
@@ -132,6 +173,31 @@ final class TicketListViewBuilderTest extends BaseViewTest
         $model = $this->builder->build($project, $refs, showDone: false);
 
         self::assertSame('workflow', $model->tickets[0]->type);
+    }
+
+    #[Test]
+    public function it_propagates_status_comment_to_ticket_row_view_model(): void
+    {
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'commented-ticket'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting on the migration review');
+
+        $project = $this->projectService->show($this->projectId);
+        $refs = $this->ticketService->list($this->projectId);
+        $model = $this->builder->build($project, $refs, showDone: false);
+
+        self::assertSame('waiting on the migration review', $model->tickets[0]->statusComment);
+    }
+
+    #[Test]
+    public function it_carries_an_empty_status_comment_when_none_was_set(): void
+    {
+        $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'uncommented-ticket'));
+
+        $project = $this->projectService->show($this->projectId);
+        $refs = $this->ticketService->list($this->projectId);
+        $model = $this->builder->build($project, $refs, showDone: false);
+
+        self::assertSame('', $model->tickets[0]->statusComment);
     }
 
     #[Test]

@@ -29,7 +29,8 @@ final readonly class HomeController
 
         if ($projectId > 0) {
             $showDone = $request->query->has('show_done');
-            $response = ($this->ticketList)($projectId, $showDone);
+            $inFlight = $request->query->has('in_flight');
+            $response = ($this->ticketList)($projectId, $showDone, $inFlight);
             if ($response instanceof Response) {
                 return $response;
             }

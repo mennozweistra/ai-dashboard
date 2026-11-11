@@ -192,7 +192,9 @@ As of ticket 161, the same `TM_DB` variable is honored by `bin/tm` and `bin/tm-m
 
 ## 2026-07-03 — Task 1268 (ticket 153) — Read-only ticket-panel columns render outside `.panel-view`/`.panel-edit`, not duplicated inside both
 
-**Decision:** The `.task-panel-meta` section listing `id`/`project`/`status`/`type`/`created`/`updated`/`archived`/`session`/`priority` is a direct child of `.task-panel-body` in `#ticket-panel`, a sibling of `.panel-view` and `.panel-edit`, not duplicated inside each. Only `name`/`description`/`ai_description` — the three editable fields — are rendered twice (once read-only in `.panel-view`, once as form controls in `.panel-edit`).
+**Decision:** The `.task-panel-meta` section listing `id`/`project`/`status`/`type`/`created`/`updated`/`archived`/`session`/`priority`/`status comment` is a direct child of `.task-panel-body` in `#ticket-panel`, a sibling of `.panel-view` and `.panel-edit`, not duplicated inside each. The editable fields — `name`/`description`/`ai_description`/`status_comment` — are rendered twice (once in `.panel-view` or, for `status_comment`, in the always-visible meta section, and once as form controls in `.panel-edit`).
+
+**Amended 2026-08-05 (ticket 56, requirement 75):** `status_comment` joined both lists. It is the one field that is both editable and part of the always-visible meta section, so it sits in `.task-panel-meta` rather than in `.panel-view`, and its meta row reads the same edit-preserving value the form input does — otherwise a failed save would show the stored comment beside the typed one.
 
 **Reason:** Requirement 137 asks that the panel show every column, and the task's ai_description says the non-editable columns "render read-only in both modes". Placing them outside the `data-mode`-gated wrapper satisfies "both modes" for free — they are simply always in the DOM and always visible, since nothing about them changes between view and edit. Duplicating nine unchanging fields into both `.panel-view` and `.panel-edit` would be pure markup duplication with no behavioural difference.
 
@@ -468,3 +470,11 @@ As of ticket 161, the same `TM_DB` variable is honored by `bin/tm` and `bin/tm-m
 **Reason:** (1) `InstalledVersions::getInstallPath()` reads the value Composer itself recorded at install time, so it resolves correctly whether `ai-toolset/tm` landed as a path-repository symlink (development layout, `vendor/ai-toolset/tm -> ../../../ai-tm/`) or a real mirrored copy (composer install layout) — verified against both in this task (see task result). Guessing a path relative to `ai-dashboard`'s own file location cannot work here the way `SchemaChecker::defaultMigrationsPath()` does for `ai-lib`, because the target binary lives in a *different* package than the code doing the resolving. (2) The rename keeps the class name honest — "IdeCommandConfig" reading a `port` key would mislead a reader — and the per-key static methods avoid a value object with fields most callers do not need. (3) No requirement text pinned the precedence order down; this is the one product-behavior call in this task without an automated test asserting it (recorded to `tm` as a `check` question, per the task's own instructions).
 
 **Where:** `src/Kernel/Application.php`, `src/Kernel/DashboardConfig.php` (renamed from `IdeCommandConfig.php`), `bin/ai-dashboard`, `public/index.php`, `composer.json`, `tests/Kernel/ApplicationTest.php`, `tests/Kernel/DashboardConfigTest.php` (renamed from `IdeCommandConfigTest.php`)
+
+## 2026-08-05 — Task 1048 (ticket 56) — Status comment column uses proportional `fr` grid tracks, not `auto`
+
+**Decision:** The ticket-row grid's name+id column and new status-comment column are sized with proportional tracks, `minmax(0, 2fr)` and `minmax(0, 1fr)`, not `auto`.
+
+**Reason:** `.ticket-row a` is `display: grid` on each row's own `<a>` individually — there is no subgrid tying rows together. An `auto` track is sized by that one row's own content, so a free-text comment column sized `auto` would give every row a different column width instead of a shared one, and a long comment would widen its row rather than truncate. A fraction of the row's own width (`fr`) resolves to the same pixel value in every row because every row's grid container is the same width, which is what makes the comment column, and the pre-existing name+id column beside it, line up down the whole list.
+
+**Where:** `public/static/style.css` (`.ticket-row a`), `docs/ui/design-system.md` §7
