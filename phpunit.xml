@@ -13,6 +13,10 @@
             <exclude>tests/View/BaseViewTest.php</exclude>
         </testsuite>
     </testsuites>
+    <php>
+        <!-- A test that starts the real bin/tm writes to this scratch database, never to the user's ~/.ai-tm/store.db. -->
+        <env name="TM_DB" value="/tmp/ai-dashboard-phpunit.db" force="true"/>
+    </php>
     <source>
         <include>
             <directory>src</directory>
