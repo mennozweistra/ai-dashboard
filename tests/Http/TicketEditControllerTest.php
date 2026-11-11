@@ -129,7 +129,7 @@ final class TicketEditControllerTest extends BaseHttpTest
         // name/description/ai_description in §2.5 of docs/api/http.md.
         $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
         $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
-        $this->app = new Application($this->pdo, null, self::ARGV_ECHO_STUB);
+        $this->app = new Application($this->pdo, self::ARGV_ECHO_STUB);
 
         $response = $this->app->handle(Request::create(
             "/ticket/{$ticket->id}/edit",
@@ -152,7 +152,7 @@ final class TicketEditControllerTest extends BaseHttpTest
         // unlike a field genuinely absent from the body (next test).
         $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
         $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
-        $this->app = new Application($this->pdo, null, self::ARGV_ECHO_STUB);
+        $this->app = new Application($this->pdo, self::ARGV_ECHO_STUB);
 
         $response = $this->app->handle(Request::create(
             "/ticket/{$ticket->id}/edit",
@@ -174,7 +174,7 @@ final class TicketEditControllerTest extends BaseHttpTest
         // comment alone.
         $project = $this->projectService->add(new ProjectIn(name: 'demo', path: '/some/project'));
         $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'demo ticket'));
-        $this->app = new Application($this->pdo, null, self::ARGV_ECHO_STUB);
+        $this->app = new Application($this->pdo, self::ARGV_ECHO_STUB);
 
         $response = $this->app->handle(Request::create(
             "/ticket/{$ticket->id}/edit",
