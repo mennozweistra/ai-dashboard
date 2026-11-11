@@ -119,7 +119,7 @@ final class TicketListTest extends BaseHttpTest
     }
 
     #[Test]
-    public function it_renders_ticket_type_in_list_row(): void
+    public function it_leaves_ticket_type_out_of_list_row(): void
     {
         $project = $this->projectService->add(new ProjectIn(name: 'proj', path: '/proj'));
         $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket', type: 'workflow'));
@@ -128,7 +128,8 @@ final class TicketListTest extends BaseHttpTest
         $response = $this->app->handle($request, catch: false);
         $content = (string) $response->getContent();
 
-        self::assertStringContainsString('workflow', $content);
+        self::assertStringContainsString('my-ticket', $content);
+        self::assertStringNotContainsString('workflow', $content);
     }
 
     #[Test]

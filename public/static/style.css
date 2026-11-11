@@ -386,14 +386,11 @@ main {
   width: 100%;
   /* name+id and the status comment are the two flexible columns, sized
      proportionally (2fr / 1fr) so they share the row's spare width and
-     both truncate rather than wrap. A proportional track resolves to the
-     same pixel width in every row because every row's grid container is
-     the same width, which is what keeps the comment column aligned down
-     the list — an `auto` track would size to that one row's own content
-     instead. Each remaining cell is pinned to its own fixed-width column
-     below (comment=3, date=4, type=5, priority=6, status=last via -2/-1)
-     so every row's columns align across the list. */
-  grid-template-columns: 16px minmax(0, 2fr) minmax(0, 1fr) auto auto auto auto;
+     both truncate rather than wrap. Priority and status get fixed widths,
+     so the spare width is the same in every row and the comment column
+     starts at the same place down the list (comment=3, priority=4,
+     status=last via -2/-1). */
+  grid-template-columns: 16px minmax(0, 2fr) minmax(0, 1fr) 96px 96px;
   align-items: center;
   gap: 16px;
   padding: 12px 4px;
@@ -420,13 +417,6 @@ main {
   text-overflow: ellipsis;
   white-space: nowrap;
   grid-column: 3;
-}
-.ticket-row .ticket-date {
-  font-family: var(--mono);
-  font-size: 14px;
-  color: var(--text-faint);
-  grid-column: 4;
-  justify-self: center;
 }
 .ticket-name-wrap {
   display: flex;
@@ -539,13 +529,8 @@ main {
 .ticket-head-line .ticket-type {
   flex: 0 0 auto;
 }
-.ticket-row .ticket-type {
-  align-self: center;
-  grid-column: 5;
-  justify-self: center;
-}
 .ticket-row .ticket-priority {
-  grid-column: 6;
+  grid-column: 4;
   justify-self: center;
 }
 .ticket-head .objective {
@@ -1713,8 +1698,6 @@ dialog#terminal-error::backdrop {
     grid-template-columns: 16px 1fr auto;
   }
   .ticket-row .ticket-id,
-  .ticket-row .ticket-date,
-  .ticket-row .ticket-type,
   .ticket-row .ticket-priority,
   .ticket-row .ticket-status-comment { display: none; }
 

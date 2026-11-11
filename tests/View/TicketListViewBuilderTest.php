@@ -163,17 +163,6 @@ final class TicketListViewBuilderTest extends BaseViewTest
         self::assertCount(7, $unfiltered->tickets);
     }
 
-    #[Test]
-    public function it_propagates_type_to_ticket_row_view_model(): void
-    {
-        $this->ticketService->add(new TicketIn(projectId: $this->projectId, name: 'a-ticket', type: 'workflow'));
-
-        $project = $this->projectService->show($this->projectId);
-        $refs = $this->ticketService->list($this->projectId);
-        $model = $this->builder->build($project, $refs, showDone: false);
-
-        self::assertSame('workflow', $model->tickets[0]->type);
-    }
 
     #[Test]
     public function it_propagates_status_comment_to_ticket_row_view_model(): void

@@ -69,8 +69,6 @@ final readonly class TicketListViewBuilder
                 projectId: $t->projectId,
                 name: $t->name,
                 status: $t->status,
-                type: $t->type,
-                createdAt: $t->createdAt->format('Y-m-d'),
                 href: '/?project=' . $t->projectId . '&ticket=' . $t->id,
                 priority: $t->priority,
                 statusComment: $t->statusComment,

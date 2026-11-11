@@ -11,8 +11,6 @@ final readonly class TicketRowViewModel
         public int $projectId,
         public string $name,
         public string $status,
-        public string $type,
-        public string $createdAt,
         public string $href,
         public ?int $priority = null,
         public string $statusComment = '',

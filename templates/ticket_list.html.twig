@@ -38,8 +38,6 @@
                             <span class="ticket-objective">{{ ticket.name }}</span>
                             <span class="ticket-id">[{{ ticket.id }}]</span>
                         </span>
-                        <span class="ticket-date">{{ ticket.createdAt }}</span>
-                        <span class="ticket-type" data-type="{{ ticket.type }}">{{ ticket.type }}</span>
                         {% if ticket.priority == 3 %}
                             <span class="ticket-priority priority-chip priority-chip-high" data-priority="high">High</span>
                         {% elseif ticket.priority == 2 %}
