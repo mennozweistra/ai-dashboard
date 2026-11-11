@@ -477,6 +477,31 @@ final class TicketDeepTest extends BaseHttpTest
     }
 
     #[Test]
+    public function it_shows_the_status_comment_on_the_page_above_the_objective(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket', description: 'the objective'));
+        $this->ticketService->set(id: $ticket->id, statusComment: 'waiting for customer reply');
+
+        $html = (string) $this->app->handle(Request::create("/?project={$project->id}&ticket={$ticket->id}"), catch: false)->getContent();
+
+        self::assertStringContainsString('<p class="status-comment-line">waiting for customer reply</p>', $html);
+        self::assertLessThan(strpos($html, 'the objective'), strpos($html, 'status-comment-line'));
+    }
+
+    #[Test]
+    public function it_renders_no_status_comment_line_when_the_ticket_has_no_comment(): void
+    {
+        $project = $this->projectService->add(new ProjectIn(name: 'my-project', path: '/p'));
+        $ticket = $this->ticketService->add(new TicketIn(projectId: $project->id, name: 'my-ticket'));
+
+        $html = (string) $this->app->handle(Request::create("/?project={$project->id}&ticket={$ticket->id}"), catch: false)->getContent();
+
+        self::assertStringNotContainsString('class="status-comment-line"', $html);
+        self::assertStringNotContainsString('class="ticket-head"', $html);
+    }
+
+    #[Test]
     public function it_prefills_the_edit_form_status_comment_input_with_the_current_value(): void
     {
         // Requirement 75: the edit form holds the status comment as the

@@ -23,9 +23,14 @@
 {% endblock %}
 
 {% block content %}
-{% if model.header.objective %}
+{% if model.header.statusComment or model.header.objective %}
 <section class="ticket-head">
+    {% if model.header.statusComment %}
+    <p class="status-comment-line">{{ model.header.statusComment }}</p>
+    {% endif %}
+    {% if model.header.objective %}
     <p class="objective text-clamp">{{ model.header.objective }}</p>
+    {% endif %}
 </section>
 {% endif %}
 

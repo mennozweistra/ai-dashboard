@@ -538,6 +538,14 @@ main {
   grid-column: 6;
   justify-self: center;
 }
+/* The ticket's status comment, set by hand. Italic in the accent colour, so
+ * it does not read as part of the objective below it. */
+.ticket-head .status-comment-line {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-style: italic;
+  color: var(--accent);
+}
 .ticket-head .objective {
   margin: 0;
   font-size: 18px;
